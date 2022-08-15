@@ -1,0 +1,6 @@
+--- !ShaderProgram/Def
+vertex:
+- tilemap.vert.gl
+fragment: 
+- tilemap.frag.gl
+...

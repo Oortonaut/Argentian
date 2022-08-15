@@ -1,0 +1,12 @@
+in vec2 uv;
+out vec4 result;
+
+uniform sampler2D tex;
+uniform sampler2D bg;
+
+void main()
+{
+    vec4 texSample = texture(tex, targetUv(uv));
+    vec4 bgSample = texture(bg, uv);
+    result = vec4(bgSample.rgb * texSample.rgb, 1);
+}

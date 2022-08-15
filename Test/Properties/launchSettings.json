@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "Test": {
+      "commandName": "Project",
+      "workingDirectory": "$(ProjectDir)",
+      "nativeDebugging": true
+    }
+  }
+}

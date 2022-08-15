@@ -1,0 +1,10 @@
+in vec2 uv;
+out vec4 result;
+
+uniform sampler2D tex;
+uniform float time;
+
+void main()
+{
+    result = texture(tex, uv + time);
+}

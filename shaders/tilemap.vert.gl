@@ -1,0 +1,20 @@
+#version 450 core
+
+in vec4 position;
+in vec2 texcoord;
+
+smooth out vec2 uv;
+
+struct Viewport {
+    vec2 origin;
+    vec2 size;
+};
+
+uniform Viewport vp;
+
+void main()
+{
+    gl_Position = vec4(position);
+    //fragColor = vec4(position.xyz * 0.5 + 0.5, 1);
+    uv = texcoord * vp.size;
+}
