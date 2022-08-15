@@ -24,11 +24,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EditorConfigFiles Remove="C:\Users\Ace\source\repos\Argentian\.editorconfig" />
+    <EditorConfigFiles Remove=".\.editorconfig" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="C:\Users\Ace\source\repos\Argentian\.editorconfig" />
+    <None Include=".\.editorconfig" />
   </ItemGroup>
 
 </Project>
