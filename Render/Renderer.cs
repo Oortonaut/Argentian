@@ -111,23 +111,29 @@ namespace Argentian.Render {
             screenQuadIB.Dispose();
         }
         static DebugSeverity minSeverity = DebugSeverity.DebugSeverityLow;
-        static DebugSeverity traceSeverity = DebugSeverity.DebugSeverityMedium;
+        static DebugSeverity traceSeverity = DebugSeverity.DebugSeverityNotification;
         static GLDebugProc debugProc = DebugCallback;
         static void DebugCallback(DebugSource source, DebugType type, uint id, DebugSeverity severity, int length, IntPtr message, IntPtr userParam) {
             string? msg = Marshal.PtrToStringUTF8(message);
             if(msg != null) {
                 var sev = severity.ToString().Substring("DebugSeverity".Length);
                 var tp = type.ToString().Substring("DebugType".Length);
-                string result = $"{tp} {sev} ({id:x8}):{msg}";
+                string result = $"{tp} {sev} ({id:x8}):{msg}\n";
                 if(severity <= traceSeverity) {
-                    Trace.WriteLine(result);
-                    Trace.Flush();
-                } else if (severity <= minSeverity){ 
-                    Debug.WriteLine(result);
-                    Debug.Flush();
-                } // else discard
+                    switch (severity) {
+                    case DebugSeverity.DebugSeverityHigh: Trace.TraceError(result); break;
+                    case DebugSeverity.DebugSeverityMedium: Trace.TraceWarning(result); break;
+                    default: Trace.TraceInformation(result); break;
+                    }
+                    if (DebugFlush) Trace.Flush();
+                }
+                if (severity <= minSeverity){ 
+                    Debug.Write(result);
+                    if (DebugFlush) Debug.Flush();
+                }
             }
         }
+        public static bool DebugFlush = false;
 
         protected override void Delete() { }
     }
