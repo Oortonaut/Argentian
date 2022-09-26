@@ -22,10 +22,6 @@ namespace Argentian.Render {
             if (def.debugSynchronous) {
                 GL.Enable(EnableCap.DebugOutputSynchronous);
             }
-            GL.Enable(EnableCap.Texture1d);
-            GL.Enable(EnableCap.Texture2d);
-            GL.Enable(EnableCap.Texture3dExt);
-            GL.Enable(EnableCap.TextureCubeMap);
             GL.Enable(EnableCap.TextureCubeMapSeamless);
             GL.Enable(EnableCap.TextureRectangle);
             GL.Enable(EnableCap.FramebufferSrgb);
