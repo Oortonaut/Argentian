@@ -77,10 +77,10 @@ namespace Argentian.Render {
         List<Wrap.Primitive> allPrims = new();
 
         static Vert[] screenQuadVerts = {
-            new Vert(new Vector4(-1.0f,  1.0f, 0.0f, 1.0f),   new Vector2(0.0f, 0.0f)),  // top left
-            new Vert(new Vector4( 1.0f,  1.0f, 0.0f, 1.0f),   new Vector2(1.0f, 0.0f)),  // top right
-            new Vert(new Vector4(-1.0f, -1.0f, 0.0f, 1.0f),   new Vector2(0.0f, 1.0f)),  // bottom left
-            new Vert(new Vector4( 1.0f, -1.0f, 0.0f, 1.0f),   new Vector2(1.0f, 1.0f)),  // bottom right
+            new Vert(new Vector4(-1.0f,  1.0f, 0.0f, 1.0f),   new Vector2(0.0f, 1.0f)),  // top left
+            new Vert(new Vector4( 1.0f,  1.0f, 0.0f, 1.0f),   new Vector2(1.0f, 1.0f)),  // top right
+            new Vert(new Vector4(-1.0f, -1.0f, 0.0f, 1.0f),   new Vector2(0.0f, 0.0f)),  // bottom left
+            new Vert(new Vector4( 1.0f, -1.0f, 0.0f, 1.0f),   new Vector2(1.0f, 0.0f)),  // bottom right
         };
         static ushort[] screenQuadIndices = {
             0, 1, 2,
