@@ -12,30 +12,26 @@ using System.Drawing;
 using OpenTK.Windowing.Common;
 
 namespace Argentian.Demo {
-    public static partial class Helpers {
+    public static partial class Extensions {
         public static Size ToSize(this Vector2i v) {
             return new Size(v.X, v.Y);
         }
     }
     internal class Program: Disposable {
         static void Main(string[] args) {
-            Console.WriteLine("Hello World!");
-            using var p = new Program();
-            p.Run();
-        }
-        static string title = "Program";
-        Program() : base(title) {
             var root = Core.Config.FindRoot();
             Core.Config.Initialize(new string[] { "--root", root });
+            var title = Core.Config.GetString("--title", "Argentian Demo");
 
-            int width = 800;
-            int height = 600;
+            using var p = new Program(title);
+            p.Run();
+        }
+        Program(string title) : base(title) {
             var nws = NativeWindowSettings.Default;
-            nws.Size = new Vector2i(width, height);
+            nws.Size = Core.Config.GetInt2("--size", 1280, 720);
             nws.API = OpenTK.Windowing.Common.ContextAPI.OpenGL;
-            nws.APIVersion = new Version(4, 5);
-            nws.Flags = OpenTK.Windowing.Common.ContextFlags.Debug |
-                OpenTK.Windowing.Common.ContextFlags.ForwardCompatible;
+            nws.APIVersion = new Version(4, 6);
+            nws.Flags = OpenTK.Windowing.Common.ContextFlags.Debug | OpenTK.Windowing.Common.ContextFlags.ForwardCompatible;
             nws.Title = title;
             nws.Profile = ContextProfile.Compatability;
             window = new GameWindow(GameWindowSettings.Default, nws);
@@ -64,7 +60,7 @@ namespace Argentian.Demo {
                 minFilter = TextureMinFilter.LinearMipmapLinear,
             });
 
-            stretchPrim = renderer.Quad("stretch.prim", stretchProgram);
+            stretchPrim = Renderer.Quad("stretch.prim", stretchProgram);
             stretchPrim.Shader.SetTexture("tex", capybarasImage, samplerBilinear);
 
             // first pass pass
