@@ -61,12 +61,12 @@ namespace Argentian.Render {
         public string Name => name;
         public long Order => def.order;
         PixelOps? blends = null;
-        public void PerFrameSetup() {
+        public virtual void PerFrameSetup() {
             if (blends == null) {
                 blends = new(framebuffer, def.settings);
             }
         }
-        public void Bind() {
+        public virtual void Bind() {
             framebuffer.Bind();
             blends!.Bind();
             Size size = framebuffer.GetSize();
@@ -112,7 +112,7 @@ namespace Argentian.Render {
             return true;
         }
         public IEnumerable<Primitive> Primitives => prims;
-        public void End() {
+        public virtual void End() {
             // for (uint unit = 0; unit < 16; ++unit) {
             //     GL.BindTextureUnit(unit, default);
             //     GL.BindSampler(unit, default);
