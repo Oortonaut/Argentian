@@ -25,6 +25,8 @@ namespace Argentian.Render {
             GL.Enable(EnableCap.TextureCubeMapSeamless);
             GL.Enable(EnableCap.TextureRectangle);
             GL.Enable(EnableCap.FramebufferSrgb);
+            // Use DirectX's much more sensible conventions
+            GL.ClipControl(ClipControlOrigin.UpperLeft, ClipControlDepth.ZeroToOne);
         }
         public Renderer() : this(new Def()) {}
         public void Queue(Pass pass) {
