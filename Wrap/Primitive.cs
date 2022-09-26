@@ -30,6 +30,7 @@ namespace Argentian.Wrap {
         public class StreamDef {
             public string name = "";
             public uint stride;
+            public uint divisor;
             public List<VertexAttrib> attributes = new();
         }
         public class Def {
@@ -40,30 +41,30 @@ namespace Argentian.Wrap {
         public Def format;
         //--- Data -----------
         Buffer[] vertexBuffer;
-        Buffer? indexBuffer;
-        int? first;
-        int? count;
+        int vertexBase = 0;
+        Buffer indexBuffer;
+        int indexBase = 0;
+        int indexCount = -1;
+        int instanceBase = 0;
+        int instanceCount = 1;
         public readonly ShaderProgram shader;
         public Primitive(
             string name_, 
             ShaderProgram shader_, 
             Def format_,
             Buffer[] vb, 
-            Buffer? ib,
-            int? indexFirst_ = null,
-            int? indexCount_ = null) :
+            Buffer ib) :
             base(name_) {
             shader = shader_;
             format = format_;
             vertexBuffer = vb;
             indexBuffer = ib;
-            first = indexFirst_;
-            count = indexCount_;
             handle = GL.CreateVertexArray();
             GL.ObjectLabel(ObjectIdentifier.VertexArray, ( uint ) handle.Handle, Name.Length, Name);
             uint streamIndex = 0;
             uint attrIndex = 0;
             foreach (var stream in format.streams) {
+                GL.VertexArrayBindingDivisor(handle, streamIndex, stream.divisor);
                 foreach (var attr in stream.attributes) {
                     GL.EnableVertexArrayAttrib(handle, attrIndex);
                     GL.VertexArrayAttribBinding(handle, attrIndex, streamIndex);
@@ -73,6 +74,19 @@ namespace Argentian.Wrap {
                 streamIndex++;
             }
         }
+        public void VertexBase(int vertexBase_ = 0) {
+            vertexBase = vertexBase_;
+        }
+        public void IndexRange(int indexBase_ = 0, int indexCount_ = -1) {
+            indexBase = indexBase_;
+            indexCount = indexCount_;
+        }
+        public void Instance(int instanceBase_ = 0, int instanceCount_ = 1) {
+            instanceBase = instanceBase_;
+            instanceCount = instanceCount_;
+        }
+        public void Instance(int instanceCount) => Instance(0, instanceCount);
+
         public VertexArrayHandle handle;
         protected override void Delete() {
             GL.DeleteVertexArray(handle);
@@ -91,9 +105,7 @@ namespace Argentian.Wrap {
                     vertexBuffer[streamIndex].stride);
                 streamIndex++;
             }
-            if(indexBuffer != null) {
-                GL.VertexArrayElementBuffer(handle, indexBuffer.handle);
-            }
+            GL.VertexArrayElementBuffer(handle, indexBuffer.handle);
         }
         public IShaderProgram Shader => shader;
         public long Order => shader.Order;
@@ -101,23 +113,16 @@ namespace Argentian.Wrap {
             //sgader.SetUniform("time", () => (double)sw.ElapsedTicks / (double)Stopwatch.Frequency);
             shader.Bind();
             GL.BindVertexArray(handle);
-            if(indexBuffer != null) {
-                int f = first.GetValueOrDefault(0);
-                int c = count.GetValueOrDefault(indexBuffer.length);
-                GL.DrawElements(
-                    format.primitiveType,
-                    c,
-                    indexBuffer.stride switch {
-                        1 => DrawElementsType.UnsignedByte,
-                        2 => DrawElementsType.UnsignedShort,
-                        4 => DrawElementsType.UnsignedInt,
-                        _ => throw new InvalidOperationException("Indexbuffer stride must be 1, 2, or 4")
-                    }, f);
-            } else {
-                int f = first.GetValueOrDefault(0);
-                int c = count.GetValueOrDefault(vertexBuffer[0].length);
-                GL.DrawArrays(format.primitiveType, f, c);
-            }
+            GL.DrawElementsInstancedBaseVertex(
+                format.primitiveType,
+                Count,
+                indexBuffer.stride switch {
+                    1 => DrawElementsType.UnsignedByte,
+                    2 => DrawElementsType.UnsignedShort,
+                    4 => DrawElementsType.UnsignedInt,
+                    _ => throw new InvalidOperationException("Indexbuffer stride must be 1, 2, or 4")
+                }, indexBase, instanceCount, vertexBase);
         }
+        public int Count => indexCount >= 0 ? indexCount : indexBuffer.count;
     }
 }
