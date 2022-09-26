@@ -11,15 +11,16 @@ namespace Argentian.Render {
         public XorShiftStar32() {}
         public uint x = 188888881;
         public uint Step(int delta = 10501) {
+            x += (uint)delta;
+            x *= 124000421;
+
             x ^= x << 13;
             x ^= x >> 21;
             x ^= x << 11;
 
-            x *= 124000421;
-            x += ( uint ) delta;
-
             return x;
         }
+        public float StepFloat(int delta = 10501) => Step(delta) / 4294967296.0f;
     };
     public static class StringExtensionMethods {
         public static uint Atom(this string str) {
