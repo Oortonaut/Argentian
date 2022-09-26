@@ -74,7 +74,7 @@ namespace Argentian.Engine {
         => new ShaderProgram(defKey, ShaderProgramDefs[defKey], ShaderObjectGet);
         //'# Texture Cache
         //'Caches textures based on filename. 
-        public static Cache<string, Texture> Textures = new(Texture.LoadFile);
+        public static Cache<string, Texture> Textures = new(Extensions.LoadTexture);
         //'# Sampler Cache
         //'## Sampler Cache
         //'### Sampler Cache
