@@ -81,22 +81,28 @@ namespace Argentian.Render {
             } else {
                 GL.ViewportIndexedf(0, 0, 0, size.Width, size.Height);
             }
-            currCull = -2;
+            currCull = GlCull.Dirty;
         }
-        int currCull = -2;
+        GlCull currCull = GlCull.Dirty;
+        enum GlCull {
+            Dirty = -2,
+            Back = -1,
+            None = 0,
+            Front = 1,
+        }
 
         public bool Prepare(Primitive prim) {
-            int newCull = ( int ) def.cullMode * ( int ) prim.format.windingMode;
+            var newCull = (GlCull)((int)def.cullMode * (int)prim.format.windingMode);
             if(currCull != newCull) {
                 switch(newCull) {
-                case -1:
+                case GlCull.Back:
                     EnableCap.CullFace.Enable(true);
                     CullFaceMode.Back.Set();
                     break;
-                case 0:
+                case GlCull.None:
                     EnableCap.CullFace.Enable(false);
                     break;
-                case 1:
+                case GlCull.Front:
                     EnableCap.CullFace.Enable(true);
                     CullFaceMode.Front.Set();
                     break;
