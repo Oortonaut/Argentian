@@ -1,9 +1,12 @@
 ﻿using OpenTK;
+using OpenTK.Compute.OpenCL;
 using OpenTK.Graphics;
 using OpenTK.Graphics.OpenGL;
 using OpenTK.Mathematics;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Runtime.InteropServices;
 
@@ -19,6 +22,7 @@ namespace Argentian.Wrap {
         public void SetShaderStorageBlock(string name, Buffer block);
         public void SetUniformBlock(string name, Buffer block);
         public void SetUniform<T>(string name, T value) where T : struct;
+        public void SetUniform<T>(string name, T[] value) where T : struct;
     }
     public class ShaderProgram: Disposable, IShaderProgram {
         public class Def {
@@ -37,9 +41,9 @@ namespace Argentian.Wrap {
         } 
         TextureBindMode unitMode = TextureBindMode.Increment;
         readonly Def def;
-        public delegate ShaderHandle ShaderMaker(ShaderType type, string key, List<string> headers);
+        public delegate ShaderHandle MakeShaderFn(ShaderType type, string key, List<string> headers);
         //                                                type        source  headers
-        public ShaderProgram(string name_, Def def_, ShaderMaker makeShaderObject) :
+        public ShaderProgram(string name_, Def def_, MakeShaderFn makeShaderObject) :
             this(name_, def_, MakeShaderObjects(def_, makeShaderObject)) { }
         public ShaderProgram(string name_, Def def_) :
             this(name_, def_, MakeShaderObjects(def_, LoadShaderObject)) { }
@@ -52,17 +56,17 @@ namespace Argentian.Wrap {
             GL.LinkProgram(handle);
             GL.GetProgramInfoLog(handle, out string log);
             DumpLog(log);
-            foreach(var shader in shaderObjects) {
+            foreach (var shader in shaderObjects) {
                 GL.DetachShader(handle, shader);
             }
-            GL.ObjectLabel(ObjectIdentifier.Program, ( uint ) handle.Handle, Name.Length, Name);
+            GL.ObjectLabel(ObjectIdentifier.Program, (uint)handle.Handle, Name.Length, Name);
         }
         public ProgramHandle handle;
         protected override void Delete() {
             GL.DeleteProgram(handle);
         }
         public override string ToString() => $"Program {handle.Handle} '{Name}'{DisposedString}";
-        static List<ShaderHandle> MakeShaderObjects(Def def, ShaderMaker makeShaderObject) {
+        static List<ShaderHandle> MakeShaderObjects(Def def, MakeShaderFn makeShaderObject) {
             var vsos = def.vertex.Select(path => makeShaderObject(ShaderType.VertexShader, path, def.headers));
             var fsos = def.fragment.Select(path => makeShaderObject(ShaderType.FragmentShader, path, def.headers));
             var result = new List<ShaderHandle>(vsos);
@@ -90,15 +94,15 @@ namespace Argentian.Wrap {
                 // throw new InvalidDataException($"Couldn't find Texture {name}");
                 return;
             }
-            uint location = ( uint ) location_;
+            uint location = (uint)location_;
             uint unit = unitMode switch {
                 TextureBindMode.External => unit_,
                 TextureBindMode.Layout => (uint)GLGetUniformInt(location),
                 TextureBindMode.Increment => nextUnit++,
                 _ => throw new ArgumentException(nameof(unitMode)),
             };
-            SetUniform(location, (int)unit);
 
+            uniformBindings[name] = new UniformBinding { location = location, value = unit, dirty = true };
             textureBindings[name] = new TextureBinding { location = location, image = image, sampler = sampler, unit = unit };
         }
         // TODO: Support for BufferTarget
@@ -110,24 +114,49 @@ namespace Argentian.Wrap {
             public int size;
         }
         public Dictionary<string, BufferRangeBinding> bufferBindings = new();
-        public void SetShaderStorageBlock(string name, Buffer block) {
-            uint index = Index(ProgramInterface.ShaderStorageBlock, name);
-            bufferBindings[name] = new BufferRangeBinding { target = BufferTargetARB.ShaderStorageBuffer, index = index, buffer = block, offset = 0, size = block.size };
+        public void SetShaderStorageBlock(string name, Buffer buffer) {
+            int index = Index(ProgramInterface.ShaderStorageBlock, name);
+            if (index >= 0) {
+                bufferBindings[name] = new BufferRangeBinding { target = BufferTargetARB.ShaderStorageBuffer, index = (uint)index, buffer = buffer, offset = 0, size = buffer.length };
+            } else {
+                Trace.TraceError($"Couldn't find ShaderStorageBlock {name}");
+            }
         }
-        public void SetUniformBlock(string name, Buffer block) {
-            uint index = Index(ProgramInterface.UniformBlock, name);
-            bufferBindings[name] = new BufferRangeBinding { target = BufferTargetARB.UniformBuffer, index = index, buffer = block, offset = 0, size = block.size };
+        public void SetUniformBlock(string name, Buffer buffer) {
+            int index = Index(ProgramInterface.UniformBlock, name);
+            if (index >= 0) {
+                bufferBindings[name] = new BufferRangeBinding { target = BufferTargetARB.UniformBuffer, index = (uint)index, buffer = buffer, offset = 0, size = buffer.length };
+            } else {
+                Trace.TraceError($"Couldn't find UniformBlock {name}");
+            }
         }
+        public enum When {
+            Once,
+            Frame,
+            Done
+        };
         public struct UniformBinding {
             public uint location;
             public dynamic value;
+            public bool dirty;
         }
         public Dictionary<string, UniformBinding> uniformBindings = new();
         public void SetUniform<T>(string name, T value) where T : struct {
             // TODO: Set fixed uniforms using GL.GenProgramPipeline();
             int location = GL.GetUniformLocation(handle, name);
             if (location >= 0) {
-                uniformBindings[name] = new UniformBinding { location = (uint)location, value = value };
+                uniformBindings[name] = new UniformBinding { location = (uint)location, value = value, dirty = true };
+            } else {
+                Trace.TraceError($"Couldn't find Uniform {name}");
+            }
+        }
+        public void SetUniform<T>(string name, T[] value) where T : struct {
+            // TODO: Set fixed uniforms using GL.GenProgramPipeline();
+            int location = GL.GetUniformLocation(handle, name);
+            if (location >= 0) {
+                uniformBindings[name] = new UniformBinding { location = (uint)location, value = value, dirty = true };
+            } else {
+                Trace.TraceError($"Couldn't find Uniform {name}");
             }
         }
         // TODO - this state needs to go into some command-list or thread specific state.
@@ -139,6 +168,14 @@ namespace Argentian.Wrap {
                 GL.UseProgram(handle);
                 validate = true;
             }
+            foreach (var name in uniformBindings.Keys) {
+                var binding = uniformBindings[name];
+                if (binding.dirty) {
+                    ProgramUniform(binding.location, binding.value);
+                    binding.dirty = false;
+                    uniformBindings[name] = binding;
+                }
+            }
             foreach (var (name, binding) in bufferBindings) {
                 GL.BindBufferRange(binding.target, binding.index, binding.buffer.handle, (IntPtr)binding.offset, binding.size);
             }
@@ -146,69 +183,87 @@ namespace Argentian.Wrap {
                 GL.BindTextureUnit(binding.unit, binding.image.handle);
                 GL.BindSampler(binding.unit, binding.sampler.handle);
             }
-            foreach(var (name, binding) in uniformBindings) {
-                SetUniform(binding.location, binding.value);
-            }
             if (validate) {
                 GL.ValidateProgram(handle);
             }
         }
-        public void SetUniform(uint location, float value) {
-            GL.ProgramUniform1f(handle, (int)location, value);
+        public void ProgramUniform(uint location, float value) { GL.ProgramUniform1f(handle, (int)location, value); }
+        public void ProgramUniform(uint location, float[] value) { GL.ProgramUniform1fv(handle, (int)location, value); }
+        public void ProgramUniform(uint location, double value) { GL.ProgramUniform1d(handle, (int)location, value); }
+        public void ProgramUniform(uint location, double[] value) { GL.ProgramUniform1dv(handle, (int)location, value); }
+        public void ProgramUniform(uint location, uint value) {            GL.ProgramUniform1ui(handle, (int)location, value);        }
+        public void ProgramUniform(uint location, uint[] value) { GL.ProgramUniform1ui(handle, (int)location, value); }
+        public void ProgramUniform(uint location, int value) {            GL.ProgramUniform1i(handle, (int)location, value);        }
+        public void ProgramUniform(uint location, int[] value) { GL.ProgramUniform1iv(handle, (int)location, value); }
+        public void ProgramUniform(uint location, Vector2 value) {            GL.ProgramUniform2f(handle, (int)location, value);        }
+        public unsafe void ProgramUniform(uint location, Vector2[] value) {
+            fixed (float* v = &value[0].X) {
+                GL.ProgramUniform2fv(handle, (int)location, value.Length, v);
+            }
         }
-        public void SetUniform(uint location, double value) {
-            GL.ProgramUniform1d(handle, (int)location, value);
+        public void ProgramUniform(uint location, Vector3 value) { GL.ProgramUniform3f(handle, (int)location, value); }
+        public unsafe void ProgramUniform(uint location, Vector3[] value) {
+            fixed (float* v = &value[0].X) {
+                GL.ProgramUniform3fv(handle, (int)location, value.Length, v);
+            }
         }
-        public void SetUniform(uint location, uint value) {
-            GL.ProgramUniform1ui(handle, (int)location, value);
+        public void ProgramUniform(uint location, Vector4 value) { GL.ProgramUniform4f(handle, (int)location, value); }
+        public unsafe void ProgramUniform(uint location, Vector4[] value) {
+            fixed (float* v = &value[0].X) {
+                GL.ProgramUniform4fv(handle, (int)location, value.Length, v);
+            }
         }
-        public void SetUniform(uint location, int value) {
-            GL.ProgramUniform1i(handle, (int)location, value);
-        }
-        public void SetUniform(uint location, Vector2 value) {
 
-            GL.ProgramUniform2f(handle, (int)location, value);
+        // # Queries
+        // ## Program properties
+        public int Program(ProgramPropertyARB pname) {
+            int result = 0;
+            GL.GetProgrami(handle, pname, ref result);
+            return result;
         }
-        public int Location(ProgramInterface iface, string name) {
-            return GL.GetProgramResourceLocation(handle, iface, name);
+        // ## Interface properties
+        public int Interface(ProgramInterface iface, ProgramInterfacePName name) {
+            int result = 0;
+            GL.GetProgramInterfacei(handle, iface, name, ref result);
+            return result;
         }
+        // ## Identifying resources
+        public int Location(ProgramInterface iface, string name) =>GL.GetProgramResourceLocation(handle, iface, name);
+        public int Index(ProgramInterface iface, string name) => (int)GL.GetProgramResourceIndex(handle, iface, name);
+        public int LocationIndex(ProgramInterface iface, string name) => GL.GetProgramResourceLocationIndex(handle, iface, name);
+        // ## Resource values
         public int Value(ProgramInterface iface, uint index, ProgramResourceProperty prop) {
             int nameLength = 0;
             int result = 0;
             GL.GetProgramResourcei(handle, iface, index, 1, prop, 1024, ref nameLength, ref result);
             return result;
         }
-        public uint Index(ProgramInterface iface, string name) {
-            return GL.GetProgramResourceIndex(handle, iface, name);
-        }
-        public uint LocationIndex(ProgramInterface iface, string name) {
-            return (uint)GL.GetProgramResourceLocationIndex(handle, iface, name);
-        }
         public string GetName(ProgramInterface iface, uint index) {
             int nameLength = 0;
             GL.GetProgramResourceName(handle, iface, index, 1024, ref nameLength, out string name);
             return name;
         }
-        // public IEnumerable<(string name, int result)> Values(ProgramInterface iface, ProgramResourceProperty prop) {
-        //     int count = Count(iface);
-        //     for (int i = 0; i < count; ++i) {
-        //         int value = Value(iface, i, prop);
-        //         if (value >= 0) {
-        //             yield return (Name(iface, i), value);
-        //         }
-        //     }
-        // }
+        public IEnumerable<(string name, int result)> Values(ProgramInterface iface, ProgramResourceProperty prop) {
+            int resourceCount = Interface(iface, ProgramInterfacePName.ActiveResources);
+            for (uint i = 0; i < resourceCount; ++i) {
+                int value = Value(iface, i, prop);
+                if (value >= 0) {
+                    yield return (GetName(iface, i), value);
+                }
+            }
+        }
+        public IEnumerable<(string name, int result)> Uniforms => Values(ProgramInterface.Uniform, ProgramResourceProperty.Location);
         // Dictionary<string, (uint index, ActiveUniformType type)> GetActiveBlocks() {
         //     var result = new Dictionary<string, (int, ActiveUniformType)>();
-        //     int count = Count(ProgramInterface.Uniform);
-        //     for (ushort i = 0; i < count; ++i) {
+        //     int resourceCount = Count(ProgramInterface.Uniform);
+        //     for (ushort i = 0; i < resourceCount; ++i) {
         //         int location = Value(ProgramInterface.Uniform, i, ProgramResourceProperty.Location);
         //     }
         //     return result;
         // }
 
         static Dictionary<string, int> sourceFiles = new() { { "prefix", 0 } };
-        static Dictionary<int, string> sourceNames = new() { {  0, "prefix"} };
+        static Dictionary<int, string> sourceNames = new() { { 0, "prefix" } };
         static int SourceFile(string file) {
             if (sourceFiles.ContainsKey(file)) {
                 return sourceFiles[file];
@@ -231,6 +286,7 @@ namespace Argentian.Wrap {
                         }
                     }
                     System.Console.WriteLine(output);
+                    System.Diagnostics.Debug.WriteLine(output);
                 }
             }
         }
@@ -248,13 +304,11 @@ namespace Argentian.Wrap {
 
             IntPtr[] sourceArray = sources.Select(source => Marshal.StringToCoTaskMemAnsi(source)).ToArray();
             int[] sourceLength = sources.Select(x => x.Length).ToArray();
-            fixed (IntPtr* bptr = sourceArray)
-            {
+            fixed (IntPtr* bptr = sourceArray) {
                 GL.ShaderSource(shader, sources.Count, (byte**)bptr, sourceLength);
             }
             GL.CompileShader(shader);
-            foreach (var m in sourceArray)
-            {
+            foreach (var m in sourceArray) {
                 Marshal.FreeCoTaskMem(m);
             }
 
