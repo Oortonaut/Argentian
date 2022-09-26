@@ -27,7 +27,7 @@ namespace Argentian.Wrap {
         protected abstract void Delete();
         //|  * Yeah just give us the name.
         public string Name => name;
-        string name;
+        readonly string name;
         //|## The Workings
         //|This is all the stuff that makes it work.
         bool disposed = false;
