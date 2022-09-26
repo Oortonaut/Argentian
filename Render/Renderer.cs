@@ -94,9 +94,9 @@ namespace Argentian.Render {
                     new Wrap.Primitive.VertexAttrib("texcoord", 2,16, VertexAttribType.Float, false ),
                 },
         };
-        Wrap.TypedBuffer<Vert> screenQuadVB = new("vertices", screenQuadVerts);
-        Wrap.TypedBuffer<ushort> screenQuadIB = new("indices", screenQuadIndices);
-        public Wrap.Primitive Quad(string name, Wrap.ShaderProgram material) {
+        static Wrap.TypedBuffer<Vert> screenQuadVB = new("vertices", screenQuadVerts);
+        static Wrap.TypedBuffer<ushort> screenQuadIB = new("indices", screenQuadIndices);
+        public static Wrap.Primitive Quad(string name, Wrap.ShaderProgram material) {
             var result = new Wrap.Primitive(name, material,
                 new Wrap.Primitive.Def {
                     primitiveType = PrimitiveType.Triangles,
