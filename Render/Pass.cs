@@ -43,7 +43,6 @@ namespace Argentian.Render {
     public class Pass {
         public class Def {
             public PixelOps.Settings settings = new();
-            public Framebuffer framebuffer = new Framebuffer("Default FB");
 
             public int order = 0;
 
@@ -57,19 +56,20 @@ namespace Argentian.Render {
         }
         public string name = "";
         public Def def = new();
+        public Framebuffer framebuffer = new Framebuffer("Default FB");
         public List<Primitive> prims = new List<Primitive>();
         public string Name => name;
         public long Order => def.order;
         PixelOps? blends = null;
         public void PerFrameSetup() {
             if (blends == null) {
-                blends = new(def.framebuffer, def.settings);
+                blends = new(framebuffer, def.settings);
             }
         }
         public void Bind() {
-            def.framebuffer.Bind();
+            framebuffer.Bind();
             blends!.Bind();
-            Size size = def.framebuffer.GetSize();
+            Size size = framebuffer.GetSize();
 
             // viewport
             if(def.viewport != null) {
