@@ -29,6 +29,12 @@ namespace Argentian.Render {
             GL.ClipControl(ClipControlOrigin.UpperLeft, ClipControlDepth.ZeroToOne);
         }
         public Renderer() : this(new Def()) {}
+        public void Shutdown() { 
+            GC.Collect(); // This can cause objects to be added to the delete queue
+            GC.WaitForPendingFinalizers();
+            ProcessDeleteQueue();
+            Dispose();
+        }
         public void Queue(Pass pass) {
             passes.Add(pass.Name, pass);
         }
