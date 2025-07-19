@@ -7,6 +7,7 @@ namespace Argentian.Wrap {
         // TODO: logic ops? It's one channel, color only I think.
         public Channel color = new();
         public Channel alpha = new();
+        // TODO: support clear for int, depth, and stencil
         public Color4<Rgba>? clear = null;
 
         public BlendUnit(Channel both_, Color4<Rgba>? clear_ = null) {
@@ -22,35 +23,35 @@ namespace Argentian.Wrap {
 
         public record Channel(
             BlendingFactor src = BlendingFactor.One,
-            BlendEquationModeEXT mode = BlendEquationModeEXT.FuncAdd,
+            BlendEquationMode mode = BlendEquationMode.FuncAdd,
             BlendingFactor dst = BlendingFactor.Zero
         ) {
             public static Channel Add(BlendingFactor src_, BlendingFactor dst_) =>
-                new Channel(src_, BlendEquationModeEXT.FuncAdd, dst_);
+                new Channel(src_, BlendEquationMode.FuncAdd, dst_);
         }
-        public static Channel Write = new Channel { 
-            src = BlendingFactor.One, 
-            mode = BlendEquationModeEXT.FuncAdd, 
-            dst = BlendingFactor.Zero 
+        public static Channel Write = new Channel {
+            src = BlendingFactor.One,
+            mode = BlendEquationMode.FuncAdd,
+            dst = BlendingFactor.Zero
         };
         public static Channel Keep = new Channel {
             src = BlendingFactor.Zero,
-            mode = BlendEquationModeEXT.FuncAdd,
+            mode = BlendEquationMode.FuncAdd,
             dst = BlendingFactor.One
         };
         public static Channel Blend = new Channel {
             src = BlendingFactor.SrcAlpha,
-            mode = BlendEquationModeEXT.FuncAdd,
+            mode = BlendEquationMode.FuncAdd,
             dst = BlendingFactor.OneMinusSrcAlpha
         };
         public static Channel Premult = new Channel {
             src = BlendingFactor.One,
-            mode = BlendEquationModeEXT.FuncAdd,
+            mode = BlendEquationMode.FuncAdd,
             dst = BlendingFactor.OneMinusSrcAlpha
         };
         public static Channel Zero = new Channel {
             src = BlendingFactor.Zero,
-            mode = BlendEquationModeEXT.FuncAdd,
+            mode = BlendEquationMode.FuncAdd,
             dst = BlendingFactor.Zero
         };
         public void Bind(uint drawBufferIndex) {

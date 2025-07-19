@@ -18,18 +18,19 @@ namespace Argentian.Wrap {
             public Color4<Rgba> constantColor = new();
         }
         public PixelOps(Framebuffer fb_, Settings settings_) {
-            fb = fb_;
+            framebuffer = fb_;
+            int framebufferHandle = framebuffer.handle.Handle;
             settings = settings_;
 
-            bool defaultFb = fb.def != null;
+            bool defaultFb = framebuffer.def != null;
             if (defaultFb) {
-                if (fb.def!.colors.Count != settings.blends.Count()) {
+                if (framebuffer.def!.colors.Count != settings.blends.Count()) {
                     throw new ArgumentOutOfRangeException($"Framebuffer/PixelOps color target mismatch");
                 }
-                if (fb.def.depth == null && settings.depth != null) {
+                if (framebuffer.def.depth == null && settings.depth != null) {
                     throw new ArgumentOutOfRangeException($"Framebuffer/PixelOps depth unsupported");
                 };
-                if (fb.def.stencil == null && settings.stencil != null) {
+                if (framebuffer.def.stencil == null && settings.stencil != null) {
                     throw new ArgumentOutOfRangeException($"Framebuffer/PixelOps stencil unsupported");
                 };
             }
@@ -39,10 +40,10 @@ namespace Argentian.Wrap {
                 if (blend != null) db.Add(cb++);
             }
             drawBuffers = db.ToArray();
-            if (fb.def != null) {
-                GL.NamedFramebufferDrawBuffers(fb.handle, drawBuffers.Length, in drawBuffers[0]);
+            if (framebuffer.def != null) {
+                GL.NamedFramebufferDrawBuffers(framebufferHandle, drawBuffers.Length, in drawBuffers[0]);
             }
-            var status = GL.CheckNamedFramebufferStatus(fb.handle, FramebufferTarget.Framebuffer);
+            var status = GL.CheckNamedFramebufferStatus(framebufferHandle, FramebufferTarget.Framebuffer);
             if (status != FramebufferStatus.FramebufferComplete) {
                 //Reset();
                 throw new ArgumentException($"Bad framebuffer {status}");
@@ -70,17 +71,16 @@ namespace Argentian.Wrap {
         }
         // Clearing
         void ClearDepth(float depth) {
-            GL.ClearNamedFramebuffer(fb.handle, GL_Buffer.Depth, 0, depth, 0);
+            GL.ClearNamedFramebuffer(framebuffer.handle.Handle, GL_Buffer.Depth, 0, depth, 0);
         }
         void ClearStencil(uint stencil) {
-            GL.ClearNamedFramebuffer(fb.handle, GL_Buffer.Stencil, 0, 0.0f, (int)stencil);
+            GL.ClearNamedFramebuffer(framebuffer.handle.Handle, GL_Buffer.Stencil, 0, 0.0f, (int)stencil);
         }
         void ClearDepthStencil(float depth, uint stencil) {
-            var GL_DEPTH_STENCIL = (GL_Buffer)0x84F9;
-            GL.ClearNamedFramebuffer(fb.handle, GL_DEPTH_STENCIL, 0, depth, (int)stencil);
+            GL.ClearNamedFramebuffer(framebuffer.handle.Handle, (GL_Buffer)All.DepthStencil, 0, depth, (int)stencil);
         }
-        void ClearColor(int drawBuffer, Color4<Rgba> c) {
-            GL.ClearNamedFramebufferf(fb.handle, GL_Buffer.Color, drawBuffer, in c.X);
+        unsafe void ClearColor(int drawBuffer, Color4<Rgba> c) {
+            GL.ClearNamedFramebufferfv(framebuffer.handle.Handle, GL_Buffer.Color, drawBuffer, &c.X);
         }
         public void Clear() {
             int drawBuffer = 0;
@@ -100,7 +100,7 @@ namespace Argentian.Wrap {
             else if (depthClear) ClearDepth(depth!.clear!.Value);
             else if (stencilClear) ClearStencil(stencil!.clear!.Value);
         }
-        Framebuffer fb;
+        Framebuffer framebuffer;
         Settings settings;
         ColorBuffer[] drawBuffers;
         bool hasColor;

@@ -22,3 +22,8 @@ media
 **/*_vk.dir/*
 **/Release/*
 **/obj/*
+*.sln.DotSettings.user
+/.idea/
+/Editor/.vs/
+/obj/
+/Editor/obj/

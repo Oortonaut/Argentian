@@ -1,0 +1,56 @@
+﻿struct FontDef {
+    ivec2 tileSize;       // source size
+    ivec2 tileOrigin;     // offset inside texture / top left spacing
+    ivec2 tileGap;        // includes any gap between tiles; from the left of the first tile to the left of the next, not including origin
+    ivec2 tileCount;      // number of tiles in each direction. calculated if non-positive.
+    // final position in cell
+    vec2 tileOffset;      // offset the font in the cell
+    vec2 tileScale;       // scale the font in the cell (for example, using a small font in a larger cell or shrinking to fit in a corner), final size
+    ivec2 fontSize;
+    // texture and sampler
+    sampler2D texture;
+};
+
+#define U16 unsigned short
+#define U8 unsigned char
+
+struct Cell {
+    U16 data;
+    U16 fg; // 4 4 4 4
+    U16 bg; // 4 4 4 4
+    U8  flags;
+    U8  stencil;
+};
+
+layout(std430) readonly buffer cells {
+    Cell cellData[];
+};
+
+Cell defaultCell = Cell(
+    U16(32),
+    U16(0x0FFF),
+    U16(0xF000),
+    U8(0),
+    U8(0)
+);
+Cell cursorCell = Cell(
+    U16('_'),
+    U16(0x0FFF),
+    U16(0x0000),
+    U8(0),
+    U8(0)
+);
+
+#define TilemapFlags_WrapX (1 << 0)
+#define TilemapFlags_WarpY (1 << 1)
+
+struct TextBuf {
+    uint flags;
+    ivec2 bufferSize;     // size of the buffer in cells
+    ivec2 cellSize;
+    // cursor display
+    ivec2 cursorPos;      // position of the cursor in the buffer
+    vec3 cursorColor;     // color of the cursor
+    // dynamic scrolling    TextBuf <-> Viewport
+    vec2 cellOffset;   // window UL corner in cells
+};

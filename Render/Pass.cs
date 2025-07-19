@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using Argentian.Wrap;
 using OpenTK;
 using OpenTK.Graphics;
@@ -36,11 +37,22 @@ namespace Argentian.Render {
     // public enum RootSize { }
     // public static partial class RootSizes {
     //     public static readonly RootSize Render = Make("Render");
-    //     public static readonly RootSize Present = Make("Present");
+    //     public static readonly RootSize Present = Make("client");
     // 
     //     static RootSize Make(string s) => (RootSize)s.Atom();
     // }
-    public class Pass {
+    public interface IPass {
+        string Name { get; }
+        void UpdateFrame(double deltaTime);
+        bool SetupFrame(Renderer renderer);
+        void BindTarget();
+        void Bind(IPrimitive prim);
+        void EndFrame();
+        Vector2i GetSize();
+        bool Matches(IPrimitive prim);
+        IEnumerable<IPrimitive> Primitives { get; }
+    }
+    public class RenderPass: IPass {
         public class Def {
             public PixelOps.Settings settings = new();
 
@@ -56,20 +68,22 @@ namespace Argentian.Render {
         }
         public string name = "";
         public Def def = new();
-        public Framebuffer framebuffer = new Framebuffer("Default FB");
-        public List<Primitive> prims = new List<Primitive>();
+        public Framebuffer framebuffer = new Framebuffer("client");
+        public List<RenderPrimitive> prims = new List<RenderPrimitive>();
         public string Name => name;
         public long Order => def.order;
-        PixelOps? blends = null;
-        public virtual void PerFrameSetup() {
+        public PixelOps? blends = null;
+        public virtual void UpdateFrame(double deltaTime) { }
+        public virtual bool SetupFrame(Renderer renderer) {
             if (blends == null) {
                 blends = new(framebuffer, def.settings);
             }
+            return true;
         }
-        public virtual void Bind() {
+        public virtual void BindTarget() {
             framebuffer.Bind();
             blends!.Bind();
-            Size size = framebuffer.GetSize();
+            Vector2i size = framebuffer.GetSize();
 
             // viewport
             if(def.viewport != null) {
@@ -79,7 +93,7 @@ namespace Argentian.Render {
                     def.viewport.Value.Z,
                     def.viewport.Value.W);
             } else {
-                GL.ViewportIndexedf(0, 0, 0, size.Width, size.Height);
+                GL.ViewportIndexedf(0, 0, 0, size.X, size.Y);
             }
             currCull = GlCull.Dirty;
         }
@@ -90,33 +104,43 @@ namespace Argentian.Render {
             None = 0,
             Front = 1,
         }
-
-        public bool Prepare(Primitive prim) {
-            var newCull = (GlCull)((int)def.cullMode * (int)prim.format.windingMode);
-            if(currCull != newCull) {
-                switch(newCull) {
-                case GlCull.Back:
-                    EnableCap.CullFace.Enable(true);
-                    CullFaceMode.Back.Set();
-                    break;
-                case GlCull.None:
-                    EnableCap.CullFace.Enable(false);
-                    break;
-                case GlCull.Front:
-                    EnableCap.CullFace.Enable(true);
-                    CullFaceMode.Front.Set();
-                    break;
+        PassFlags mask = PassFlags.None;
+        PassFlags test = PassFlags.None;
+        public void Bind(IPrimitive prim_) {
+            // Do some work to avoid switching culling mode
+            if (prim_ is RenderPrimitive prim) {
+                var newCull = (GlCull)((int)def.cullMode * (int)prim.def.windingMode);
+                if (currCull != newCull) {
+                    switch (newCull) {
+                    case GlCull.Back:
+                        EnableCap.CullFace.Enable(true);
+                        TriangleFace.Back.Set();
+                        break;
+                    case GlCull.None:
+                        EnableCap.CullFace.Enable(false);
+                        break;
+                    case GlCull.Front:
+                        EnableCap.CullFace.Enable(true);
+                        TriangleFace.Front.Set();
+                        break;
+                    }
+                    currCull = newCull;
                 }
-                currCull = newCull;
             }
-            return true;
         }
-        public IEnumerable<Primitive> Primitives => prims;
-        public virtual void End() {
+        // This will likely be devirtualized
+        public bool Matches(IPrimitive prim_) {
+            return (prim_.Flags & mask) == test;
+        }
+        public IEnumerable<IPrimitive> Primitives => prims;
+        public virtual void EndFrame() {
+            // TODO: Make default objects for textures and samplers
+            // since GL doesn't allow unbinding
             // for (uint unit = 0; unit < 16; ++unit) {
             //     GL.BindTextureUnit(unit, default);
             //     GL.BindSampler(unit, default);
             // }
         }
+        public Vector2i GetSize() => framebuffer.GetClientSize();
     }
 }

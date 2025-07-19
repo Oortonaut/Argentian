@@ -43,10 +43,6 @@ namespace Argentian.Engine {
         //'The cache holds compiled shader objects keyed to a source file
         //'compiled against a set of headers. This should also include
         //'defines, permutations, etc.
-        record struct ShaderObjectKey(
-            OpenTK.Graphics.OpenGL.ShaderType type, 
-            string source, 
-            List<string> headers);
         //'Wrap the cache.Get(key) with a function that builds the key for us.
         //'The cache factory is LoadShaderObject, which compiles the
         //'shader based on source files.
@@ -54,9 +50,12 @@ namespace Argentian.Engine {
             OpenTK.Graphics.OpenGL.ShaderType type, 
             string key, 
             List<string> headers
-        ) => ShaderObjects[new ShaderObjectKey(type, key, headers)];
-        static Cache<ShaderObjectKey, ShaderHandle> ShaderObjects =
-            new(arg => ShaderProgram.LoadShaderObject(arg.type, arg.source, arg.headers));
+        ) => ShaderObjects[new _ShaderObjectGet_Args(type, key, headers)];
+        record struct _ShaderObjectGet_Args(OpenTK.Graphics.OpenGL.ShaderType type, string source, List<string> headers);
+        static Cache<_ShaderObjectGet_Args, ShaderHandle> ShaderObjects =
+            new((_ShaderObjectGet_Args arg) => ShaderProgram.LoadShaderObject(arg.type, arg.source, arg.headers));
+
+
         //'## Shader Program Definition Cache
         //'
         //'Caches ShaderProgram.Def based on filename, conventionally foo.mat

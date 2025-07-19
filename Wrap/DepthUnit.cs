@@ -4,7 +4,7 @@ namespace Argentian.Wrap {
     public class DepthUnit {
         public DepthFunction function = DepthFunction.Less;
         public bool write = true;
-        public float rangeNear = 0.0f; // use this slice of the depth buffer range
+        public float rangeNear = 0.0f; // use this slice of the depth view range
         public float rangeFar = 1.0f;
         public float? clear = null;
         public static DepthUnit Clear => new DepthUnit {

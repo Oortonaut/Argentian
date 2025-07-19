@@ -53,10 +53,10 @@ namespace Argentian.Engine {
             try {
                 var (text, pathFile) = Core.Config.ReadFile(path, filename);
                 return Yaml.Deserializer.Deserialize<T>(text);
-            } catch (FileNotFoundException e) {
-                throw e;
             } catch (YamlDotNet.Core.YamlException e) {
                 return ThrowHelper.ThrowInvalidDataException<T>($"Couldn't load {typeof(T)} from {filename}", e);
+            } catch (FileNotFoundException) {
+                throw;
             }
         }
     }

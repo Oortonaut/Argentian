@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <Platforms>AnyCPU;x64</Platforms>
@@ -9,19 +9,26 @@
 
   <ItemGroup>
     <Compile Remove="Demo\**" />
+    <Compile Remove="Editor\**" />
     <Compile Remove="Test\**" />
     <EmbeddedResource Remove="Demo\**" />
+    <EmbeddedResource Remove="Editor\**" />
     <EmbeddedResource Remove="Test\**" />
     <None Remove="Demo\**" />
+    <None Remove="Editor\**" />
     <None Remove="Test\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommunityToolkit.Diagnostics" Version="8.0.0" />
+    <PackageReference Include="CommunityToolkit.Diagnostics" Version="8.4.0" />
     <PackageReference Include="Glob" Version="1.2.0-alpha0037" />
-    <PackageReference Include="OpenTK" Version="5.0.0-pre.7" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="2.1.3" />
-    <PackageReference Include="YamlDotNet" Version="12.0.0" />
+    <PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.183">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="OpenTK" Version="5.0.0-pre.14" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.10" />
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -30,6 +37,10 @@
 
   <ItemGroup>
     <None Include=".\.editorconfig" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Render\Passes\" />
   </ItemGroup>
 
 </Project>

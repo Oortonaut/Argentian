@@ -33,24 +33,25 @@ namespace Argentian.Wrap {
         public readonly Def def;
         public Sampler(string name, Def def_): base(name) {
             def = def_;
-            handle = GL.CreateSampler();
-            GL.ObjectLabel(ObjectIdentifier.Sampler, ( uint ) handle.Handle, Name.Length, Name);
-            GL.SamplerParameterf(handle, SamplerParameterF.TextureBorderColor, def.borderColor.ToFloats());
-            GL.SamplerParameteri(handle, SamplerParameterI.TextureMagFilter, (int)def.magFilter);
-            GL.SamplerParameteri(handle, SamplerParameterI.TextureMinFilter, (int)def.minFilter);
-            GL.SamplerParameteri(handle, SamplerParameterI.TextureWrapS, (int)def.wrapS);
-            GL.SamplerParameteri(handle, SamplerParameterI.TextureWrapT, (int)def.wrapT);
-            GL.SamplerParameteri(handle, SamplerParameterI.TextureWrapR, (int)def.wrapR);
-            GL.SamplerParameterf(handle, SamplerParameterF.TextureMinLod, def.minLod);
-            GL.SamplerParameterf(handle, SamplerParameterF.TextureMaxLod, def.maxLod);
-            GL.SamplerParameterf(handle, SamplerParameterF.TextureLodBias, def.lodBias);
-            GL.SamplerParameterf(handle, SamplerParameterF.TextureMaxAnisotropy, def.maxAnisotropy);
-            GL.SamplerParameteri(handle, SamplerParameterI.TextureCompareMode, (int)def.compareMode);
-            GL.SamplerParameteri(handle, SamplerParameterI.TextureCompareFunc, (int)def.compareFunc);
+            handle = new SamplerHandle(GL.CreateSampler());
+            int samplerHandle = handle.Handle;
+            GL.ObjectLabel(ObjectIdentifier.Sampler, (uint)samplerHandle, Name.Length, Name);
+            GL.SamplerParameterf(samplerHandle, SamplerParameterF.TextureBorderColor, def.borderColor.ToFloats());
+            GL.SamplerParameteri(samplerHandle, SamplerParameterI.TextureMagFilter, (int)def.magFilter);
+            GL.SamplerParameteri(samplerHandle, SamplerParameterI.TextureMinFilter, (int)def.minFilter);
+            GL.SamplerParameteri(samplerHandle, SamplerParameterI.TextureWrapS, (int)def.wrapS);
+            GL.SamplerParameteri(samplerHandle, SamplerParameterI.TextureWrapT, (int)def.wrapT);
+            GL.SamplerParameteri(samplerHandle, SamplerParameterI.TextureWrapR, (int)def.wrapR);
+            GL.SamplerParameterf(samplerHandle, SamplerParameterF.TextureMinLod, def.minLod);
+            GL.SamplerParameterf(samplerHandle, SamplerParameterF.TextureMaxLod, def.maxLod);
+            GL.SamplerParameterf(samplerHandle, SamplerParameterF.TextureLodBias, def.lodBias);
+            GL.SamplerParameterf(samplerHandle, SamplerParameterF.TextureMaxAnisotropy, def.maxAnisotropy);
+            GL.SamplerParameteri(samplerHandle, SamplerParameterI.TextureCompareMode, (int)def.compareMode);
+            GL.SamplerParameteri(samplerHandle, SamplerParameterI.TextureCompareFunc, (int)def.compareFunc);
         }
         public SamplerHandle handle;
         protected override void Delete() {
-            GL.DeleteSampler(handle);
+            GL.DeleteSampler(handle.Handle);
         }
         public override string ToString() => $"Sampler {handle.Handle} '{Name}'{DisposedString}";
     }

@@ -5,7 +5,7 @@ It is mostly harmless but there is little documentation. The demo, simple as it 
 
 Versatile texture binding supports shader side layout (set by name on C# side), code side, or automatic texture unit selection. It separates Samplers and Textures. 
 
-No shader #include but there are hax for some shader modularity. Create a .h.glsl with declarations and add it to the headers in the ShaderProgram.Def. Put function definition in a .glsl and include it with the vertex or pixel shaders.
+No shader #include but there are hax for some shader modularity. Create a .h.glsl with declarations and add it to the headers in the shader.mat.yaml/. Put function definition in a .glsl and include it with the vertex or pixel shaders.
 
 Some of the odd design choices are to support future Vulkan, DX12, and other backends.
 

@@ -1,6 +1,9 @@
 --- !ShaderProgram/Def
+headers:
+  - tilemap.h.gl
 vertex:
 - tilemap.vert.gl
-fragment: 
+fragment:
 - tilemap.frag.gl
+unitMode: Layout
 ...

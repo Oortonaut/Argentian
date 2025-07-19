@@ -2,21 +2,22 @@
 using OpenTK.Graphics;
 using OpenTK.Graphics.OpenGL;
 using System.Drawing;
+using OpenTK.Mathematics;
 
 namespace Argentian.Wrap {
     public class Renderbuffer: Disposable {
         // TODO: Use Def?
-        public Renderbuffer(string name, InternalFormat storage, Size size_): base(name) {
+        public Renderbuffer(string name, InternalFormat storage, Vector2i size_): base(name) {
             size = size_;
-            handle = GL.CreateRenderbuffer();
-            GL.ObjectLabel(ObjectIdentifier.Renderbuffer, ( uint ) handle.Handle, Name.Length, Name);
-            GL.NamedRenderbufferStorage(handle, storage, size.Width, size.Height);
+            native = new RenderbufferHandle(GL.CreateRenderbuffer());
+            GL.ObjectLabel(ObjectIdentifier.Renderbuffer, ( uint ) native.Handle, Name.Length, Name);
+            GL.NamedRenderbufferStorage(native.Handle, storage, size.X, size.Y);
         }
-        public RenderbufferHandle handle;
+        public RenderbufferHandle native;
         protected override void Delete() {
-            GL.DeleteRenderbuffer(handle);
+            GL.DeleteRenderbuffer(native.Handle);
         }
-        public override string ToString() => $"Renderbuffer {handle.Handle} '{Name}'[{size}]{DisposedString}";
-        public Size size;
+        public override string ToString() => $"Renderbuffer {native.Handle} '{Name}'[{size}]{DisposedString}";
+        public Vector2i size;
     }
 }

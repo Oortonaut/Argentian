@@ -1,53 +1,56 @@
-﻿using OpenTK;
-using OpenTK.Graphics.OpenGL;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Formats;
-using SixLabors.ImageSharp.Formats.Png;
-using System;
+﻿using System;
 using System.IO;
 using System.Drawing;
 using OpenTK.Graphics;
+using OpenTK.Graphics.OpenGL;
+using OpenTK.Mathematics;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Formats.Bmp;
+using SixLabors.ImageSharp.Formats.Png;
 
 namespace Argentian.Wrap {
     public class Texture: Disposable {
         public class Def {
             public TextureTarget target;
+
             public InternalFormat internalFormat = InternalFormat.Rgba8;
+
             // from user if no filename, otherwise from file
-            public Size size = Size.Empty;
+            public Vector2i size = Vector2i.Zero;
             public PixelFormat format = PixelFormat.Rgba;
             public PixelType type = PixelType.UnsignedByte;
         }
 
         public readonly Def def;
-        public Texture(string name, Def def_) : base(name) {
+        public Texture(string name, Def def_): base(name) {
             def = def_;
-            handle = GL.CreateTexture(TextureTarget.Texture2d);
-            GL.ObjectLabel(ObjectIdentifier.Texture, (uint)handle.Handle, Name.Length, Name);
+            native = new TextureHandle(GL.CreateTexture(TextureTarget.Texture2d));
+            GL.ObjectLabel(ObjectIdentifier.Texture, (uint)native.Handle, Name.Length, Name);
             CreateStorage(def);
         }
-        public TextureHandle handle;
+        public TextureHandle native;
         protected override void Delete() {
-            GL.DeleteTexture(handle);
+            GL.DeleteTexture(native.Handle);
         }
-        public override string ToString() => $"Texture {handle.Handle} '{Name}'{def.size}/{def.internalFormat}{DisposedString}";
+        public override string ToString() => $"Texture {native.Handle} '{Name}'{def.size}/{def.internalFormat}{DisposedString}";
+        public Vector2i Size => def.size;
 
         void CreateStorage(Def def) {
             switch (def.target) {
             case TextureTarget.Texture2d:
                 GL.TextureStorage2D(
-                    handle,
+                    native.Handle,
                     1,
                     (SizedInternalFormat)def.internalFormat,
-                    def.size.Width,
-                    def.size.Height);
+                    def.size.X,
+                    def.size.Y);
                 var err = GL.GetError();
                 break;
             default:
                 throw new InvalidDataException("Unsupported");
             }
         }
-        public bool Set<T>(Size size, PixelFormat fmt, PixelType type, T[] pixels, int mip = -1) where T : unmanaged {
+        public bool Set<T>(Vector2i size, PixelFormat fmt, PixelType type, T[] pixels, int mip = -1) where T : unmanaged {
             bool automip = false;
             if (mip == -1) {
                 mip = 0;
@@ -56,12 +59,12 @@ namespace Argentian.Wrap {
             switch (def.target) {
             case TextureTarget.Texture2d:
                 GL.TextureSubImage2D(
-                    handle,
+                    native.Handle,
                     mip,
                     0,
                     0,
-                    def.size.Width,
-                    def.size.Height,
+                    def.size.X,
+                    def.size.Y,
                     def.format,
                     def.type,
                     in pixels[0]);
@@ -70,10 +73,10 @@ namespace Argentian.Wrap {
                 throw new InvalidDataException("Unsupported");
             }
             if (automip) {
-                GL.GenerateTextureMipmap(handle);
+                GL.GenerateTextureMipmap(native.Handle);
             }
-            // GL.TextureParameter(handle, TextureParameterName.TextureMinLod, 0);
-            // GL.TextureParameter(handle, TextureParameterName.TextureMaxLod, 0);
+            // GL.TextureParameter(handle.Handle, TextureParameterName.TextureMinLod, 0);
+            // GL.TextureParameter(handle.Handle, TextureParameterName.TextureMaxLod, 0);
             return true;
         }
     }
@@ -100,53 +103,95 @@ namespace Argentian.Wrap {
         }
         public static Texture.Def LoadTextureDef(Stream stream) {
             stream.Position = 0;
-            var (info, fmt) = SixLabors.ImageSharp.Image.IdentifyWithFormatAsync(stream).Result;
+            var info = SixLabors.ImageSharp.Image.IdentifyAsync(stream).Result;
+            var fmt = info.Metadata.DecodedImageFormat;
             stream.Position = 0;
-            int channels;
-            int bpc;
-            if (info.Metadata.GetFormatMetadata(fmt as PngFormat) is PngMetadata pngInfo) {
-                channels = pngInfo.ColorType switch {
-                    PngColorType.Grayscale => 1,
-                    PngColorType.GrayscaleWithAlpha => 2,
-                    PngColorType.Rgb => 3,
-                    PngColorType.RgbWithAlpha => 4,
-                    PngColorType.Palette => pngInfo.HasTransparency ? 4 : 3,
-                    _ => 4,
-                };
-                bpc = (int)(pngInfo.BitDepth ?? PngBitDepth.Bit8);
-            } else {
-                int bits = info.PixelType?.BitsPerPixel ?? 32;
-                bpc = bits <= 32 ? 8 : 16;
-                channels = bits / bpc;
-            }
-            return new Texture.Def {
-                format = channels switch {
-                    1 => PixelFormat.Luminance,
-                    2 => PixelFormat.LuminanceAlpha,
-                    3 => PixelFormat.Rgb,
-                    _ => PixelFormat.Rgba,
-                },
-                internalFormat = bpc <= 8 ?
-                channels switch {
+            int bits = info.PixelType?.BitsPerPixel ?? 32;
+            int bpc = bits <= 32 ? 8 : 16;
+            int channels = bits / bpc;
+
+            PixelFormat format = channels switch {
+                1 => PixelFormat.Red,
+                2 => PixelFormat.Rg,
+                3 => PixelFormat.Rgb,
+                _ => PixelFormat.Rgba,
+            };
+            InternalFormat internalFormat = bpc <= 8
+                ? channels switch {
                     1 => InternalFormat.R8,
                     2 => InternalFormat.Rg8,
                     3 => InternalFormat.Rgb8,
                     _ => InternalFormat.Rgba8,
-                } : channels switch {
+                }
+                : channels switch {
                     1 => InternalFormat.R16,
                     2 => InternalFormat.Rg16,
                     3 => InternalFormat.Rgb16,
                     _ => InternalFormat.Rgba16,
-                },
-                target = TextureTarget.Texture2d,
-                type = bpc <= 8 ? PixelType.UnsignedByte : PixelType.UnsignedShort,
-                size = new Size(info.Width, info.Height),
+                };
+
+            if (fmt is PngFormat pngFormat) {
+                if (info.Metadata.GetFormatMetadata(pngFormat) is PngMetadata pngInfo) {
+                    channels = pngInfo.ColorType switch {
+                        PngColorType.Grayscale => 1,
+                        PngColorType.GrayscaleWithAlpha => 2,
+                        PngColorType.Rgb => 3,
+                        PngColorType.RgbWithAlpha => 4,
+                        PngColorType.Palette => pngInfo.TransparentColor != null ? 4 : 3,
+                        _ => 4,
+                    };
+                    bpc = (int)(pngInfo.BitDepth ?? PngBitDepth.Bit8);
+                }
+            } else if (fmt is BmpFormat bmpFormat) {
+                if (info.Metadata.GetFormatMetadata(bmpFormat) is BmpMetadata bmpInfo) {
+                    switch (bmpInfo.BitsPerPixel) {
+                    case BmpBitsPerPixel.Pixel1: // palettized bitmap
+                        channels = 1;
+                        bpc = 1;
+                        format = PixelFormat.Red;
+                        internalFormat = InternalFormat.CompressedRed;
+                        break;
+                    case BmpBitsPerPixel.Pixel4: // palette
+                        channels = 3;
+                        format = PixelFormat.Rgba;
+                        internalFormat = InternalFormat.Rgba4;
+                        bpc = 4;
+                        break;
+                    case BmpBitsPerPixel.Pixel8: // palette
+                        channels = 3;
+                        format = PixelFormat.Rgb;
+                        internalFormat = InternalFormat.Rgb8;
+                        bpc = 8;
+                        break;
+                    case BmpBitsPerPixel.Pixel16:
+                        channels = 4;
+                        format = PixelFormat.Rgba;
+                        internalFormat = InternalFormat.Rgba4;
+                        bpc = 8;
+                        break;
+                    case BmpBitsPerPixel.Pixel24:
+                        channels = 3;
+                        format = PixelFormat.Rgb;
+                        internalFormat = InternalFormat.Rgb8;
+                        bpc = 8;
+                        break;
+                    case BmpBitsPerPixel.Pixel32:
+                        channels = 4;
+                        format = PixelFormat.Rgba;
+                        internalFormat = InternalFormat.Rgba8;
+                        bpc = 8;
+                        break;
+                    }
+                }
+            }
+            return new Texture.Def {
+                target = TextureTarget.Texture2d, type = bpc <= 8 ? PixelType.UnsignedByte : PixelType.UnsignedShort, size = new Vector2i(info.Width, info.Height),
             };
         }
         public static TPixel[] LoadImage<TPixel>(Stream stream) where TPixel : unmanaged, IPixel<TPixel> {
             SixLabors.ImageSharp.Image<TPixel> fileImage = SixLabors.ImageSharp.Image.Load<TPixel>(stream);
 
-            var size = new Size(fileImage.Width, fileImage.Height);
+            var size = new Vector2i(fileImage.Width, fileImage.Height);
 
             var result = new TPixel[fileImage.Height * fileImage.Width] ?? throw new InsufficientMemoryException("Couldn't allocate temporary image buffer");
             fileImage.CopyPixelDataTo(result);

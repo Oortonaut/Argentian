@@ -10,7 +10,7 @@ namespace Argentian.Wrap {
             uint testMask = uint.MaxValue,
             uint writeMask = uint.MaxValue,
             StencilFunction function = StencilFunction.Always) {
-            public void Bind(StencilFaceDirection face) {
+            public void Bind(TriangleFace face) {
                 GL.StencilFuncSeparate(face, function, (int)test, testMask);
                 GL.StencilOpSeparate(face, fail, zfail, pass);
                 GL.StencilMaskSeparate(face, writeMask);
@@ -20,8 +20,8 @@ namespace Argentian.Wrap {
         public Face back = new();
         public uint? clear = null;
         public void Bind() {
-            front.Bind(StencilFaceDirection.Front);
-            back.Bind(StencilFaceDirection.Back);
+            front.Bind(TriangleFace.Front);
+            back.Bind(TriangleFace.Back);
         }
     }
 }

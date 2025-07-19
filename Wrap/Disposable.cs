@@ -24,6 +24,7 @@ namespace Argentian.Wrap {
         //|  * {i} is always called, and is used to clean up unmanaged
         //|    resources, system handles, and the like.
         protected virtual void QueueDelete() => DeleteQueue.Add(this);
+        //|  * The actual delete happens when the delete queue is being processed.      
         protected abstract void Delete();
         //|  * Yeah just give us the name.
         public string Name => name;
@@ -41,6 +42,7 @@ namespace Argentian.Wrap {
                 disposed = true;
             }
         }
+        #region Lifetime
         ~Disposable() {
             Dispose(disposing: false);
         }
@@ -53,6 +55,7 @@ namespace Argentian.Wrap {
             };
             DeleteQueue.Clear();
         }
+        #endregion
     }
 #if false
     public abstract class GlDisposable<THandle>: Disposable where THandle : struct{
