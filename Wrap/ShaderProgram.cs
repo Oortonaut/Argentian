@@ -99,7 +99,7 @@ namespace Argentian.Wrap {
             return result;
         }
         public void SetTexture(string name, Texture image, Sampler sampler, uint unit_ = 0) {
-            int location_ = GL.GetUniformLocation(handle.Handle, name);
+            int location_ = Location(ProgramInterface.Uniform, name);
             if (location_ < 0) {
                 // throw new InvalidDataException($"Couldn't find Texture {name}");
                 return;
@@ -169,7 +169,7 @@ namespace Argentian.Wrap {
         public Dictionary<string, UniformBinding> uniformBindings = new();
         public void SetUniform<T>(string name, T value) where T : struct {
             // TODO: Set fixed uniforms using GL.GenProgramPipeline();
-            int location = GL.GetUniformLocation(handle.Handle, name);
+            int location = Location(ProgramInterface.Uniform, name);
             if (location >= 0) {
                 uniformBindings[name] = new UniformBinding {
                     location = (uint)location, value = value, dirty = true
@@ -180,7 +180,7 @@ namespace Argentian.Wrap {
         }
         public void SetUniform<T>(string name, T[] value) where T : struct {
             // TODO: Set fixed uniforms using GL.GenProgramPipeline();
-            int location = GL.GetUniformLocation(handle.Handle, name);
+            int location = Location(ProgramInterface.Uniform, name);
             if (location >= 0) {
                 uniformBindings[name] = new UniformBinding {
                     location = (uint)location, value = value, dirty = true

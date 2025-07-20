@@ -13,11 +13,11 @@ namespace Argentian.Wrap {
         public class Def {
             public TextureTarget target;
 
-            public InternalFormat internalFormat = InternalFormat.Rgba8;
 
             // from user if no filename, otherwise from file
             public Vector2i size = Vector2i.Zero;
             public PixelFormat format = PixelFormat.Rgba;
+            public InternalFormat internalFormat = InternalFormat.Rgba8;
             public PixelType type = PixelType.UnsignedByte;
         }
 
@@ -93,6 +93,8 @@ namespace Argentian.Wrap {
                 InternalFormat.Rg8 => result.Set(def.size, def.format, def.type, LoadImage<La16>(stream)),
                 InternalFormat.Rgb8 => result.Set(def.size, def.format, def.type, LoadImage<Rgb24>(stream)),
                 InternalFormat.Rgba8 => result.Set(def.size, def.format, def.type, LoadImage<Rgba32>(stream)),
+                InternalFormat.Srgb8 => result.Set(def.size, def.format, def.type, LoadImage<Rgb24>(stream)),
+                InternalFormat.Srgb8Alpha8 => result.Set(def.size, def.format, def.type, LoadImage<Rgba32>(stream)),
                 InternalFormat.R16 => result.Set(def.size, def.format, def.type, LoadImage<L16>(stream)),
                 InternalFormat.Rg16 => result.Set(def.size, def.format, def.type, LoadImage<La32>(stream)),
                 InternalFormat.Rgb16 => result.Set(def.size, def.format, def.type, LoadImage<Rgb48>(stream)),
@@ -120,8 +122,8 @@ namespace Argentian.Wrap {
                 ? channels switch {
                     1 => InternalFormat.R8,
                     2 => InternalFormat.Rg8,
-                    3 => InternalFormat.Rgb8,
-                    _ => InternalFormat.Rgba8,
+                    3 => InternalFormat.Srgb8,
+                    _ => InternalFormat.Srgb8Alpha8,
                 }
                 : channels switch {
                     1 => InternalFormat.R16,
@@ -129,6 +131,7 @@ namespace Argentian.Wrap {
                     3 => InternalFormat.Rgb16,
                     _ => InternalFormat.Rgba16,
                 };
+            PixelType pixelType = bpc <= 8 ? PixelType.UnsignedByte : PixelType.UnsignedShort;
 
             if (fmt is PngFormat pngFormat) {
                 if (info.Metadata.GetFormatMetadata(pngFormat) is PngMetadata pngInfo) {
@@ -143,6 +146,7 @@ namespace Argentian.Wrap {
                     bpc = (int)(pngInfo.BitDepth ?? PngBitDepth.Bit8);
                 }
             } else if (fmt is BmpFormat bmpFormat) {
+                pixelType = PixelType.UnsignedByte;
                 if (info.Metadata.GetFormatMetadata(bmpFormat) is BmpMetadata bmpInfo) {
                     switch (bmpInfo.BitsPerPixel) {
                     case BmpBitsPerPixel.Pixel1: // palettized bitmap
@@ -155,37 +159,43 @@ namespace Argentian.Wrap {
                         channels = 3;
                         format = PixelFormat.Rgba;
                         internalFormat = InternalFormat.Rgba4;
+                        pixelType = PixelType.UnsignedShort4444;
                         bpc = 4;
                         break;
                     case BmpBitsPerPixel.Pixel8: // palette
                         channels = 3;
                         format = PixelFormat.Rgb;
-                        internalFormat = InternalFormat.Rgb8;
+                        internalFormat = InternalFormat.Srgb8;
                         bpc = 8;
                         break;
                     case BmpBitsPerPixel.Pixel16:
                         channels = 4;
                         format = PixelFormat.Rgba;
                         internalFormat = InternalFormat.Rgba4;
+                        pixelType = PixelType.UnsignedShort4444;
                         bpc = 8;
                         break;
                     case BmpBitsPerPixel.Pixel24:
                         channels = 3;
                         format = PixelFormat.Rgb;
-                        internalFormat = InternalFormat.Rgb8;
+                        internalFormat = InternalFormat.Srgb8;
                         bpc = 8;
                         break;
                     case BmpBitsPerPixel.Pixel32:
                         channels = 4;
                         format = PixelFormat.Rgba;
-                        internalFormat = InternalFormat.Rgba8;
+                        internalFormat = InternalFormat.Srgb8Alpha8;
                         bpc = 8;
                         break;
                     }
                 }
             }
             return new Texture.Def {
-                target = TextureTarget.Texture2d, type = bpc <= 8 ? PixelType.UnsignedByte : PixelType.UnsignedShort, size = new Vector2i(info.Width, info.Height),
+                target = TextureTarget.Texture2d,
+                type = pixelType,
+                format = format,
+                internalFormat = internalFormat,
+                size = new Vector2i(info.Width, info.Height),
             };
         }
         public static TPixel[] LoadImage<TPixel>(Stream stream) where TPixel : unmanaged, IPixel<TPixel> {

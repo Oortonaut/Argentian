@@ -11,12 +11,7 @@ using OpenTK.Input;
 using System.Drawing;
 using OpenTK.Windowing.Common;
 
-namespace Argentian.Demo {
-    public static partial class Extensions {
-        public static Size ToSize(this Vector2i v) {
-            return new Size(v.X, v.Y);
-        }
-    }
+namespace Argentian {
     internal class Program: Disposable {
         static void Main(string[] args) {
             var root = Core.Config.FindRoot();
