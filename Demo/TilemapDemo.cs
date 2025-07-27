@@ -22,7 +22,7 @@ namespace Argentian {
             // Load tilemap shader program from YAML file
             var tilemapProgram = Caches.NewShaderProgram("tilemap.mat");
 
-            int W = 132, H = 80;
+            int W = 16, H = 16;
             // Setup primitive
             var tilemapDef = new TilemapPrimitive.Def {
                 primitiveType = PrimitiveType.Triangles,
@@ -32,13 +32,22 @@ namespace Argentian {
                     bufferSize = new Vector2i(W, H),
                     cellSize = new Vector2i(32, 32),
                 },
-                fonts = [new TilemapPrimitive.FontDef {
-                    tileCount = new Vector2i(12, 32),
-                    tileSize = new Vector2i(32, 32),
-                    tileScale = new Vector2(1, 1),
-                    texture = Caches.Textures.Get("NewTown.bmp"),
-                    sampler = Caches.Samplers.Get("nearest.samp"),
-                }],
+                fonts = [
+                    new TilemapPrimitive.FontDef {
+                        tileCount = new Vector2i(5, 24),
+                        tileSize = new Vector2i(32, 32),
+                        tileScale = new Vector2(1, 1),
+                        texture = Caches.Textures.Get("BadAttitudeTiles.png"),
+                        sampler = Caches.Samplers.Get("nearest.samp"),
+                    },
+                    new TilemapPrimitive.FontDef {
+                        tileCount = new Vector2i(12, 32),
+                        tileSize = new Vector2i(32, 32),
+                        tileScale = new Vector2(1, 1),
+                        texture = Caches.Textures.Get("NewTown.bmp"),
+                        sampler = Caches.Samplers.Get("nearest.samp"),
+                    }
+                ],
             };
             //tilemapPrim = renderer.Quad("tilemap.prim", tilemapProgram);
             tilemapPrim = new TilemapPrimitive($"{title} primitive", renderer, tilemapProgram, tilemapDef);

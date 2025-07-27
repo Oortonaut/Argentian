@@ -15,12 +15,18 @@ namespace Argentian.Wrap {
                 GL.NamedFramebufferRenderbuffer(frameBuffer.Handle, dest, RenderbufferTarget.Renderbuffer, (int)rb.native);
             }
         };
+        public record ScreenBuffer(): Attachment {
+            public override Vector2i GetSize() => Framebuffer.sizes["client"];
+            public override void Bind(FramebufferHandle frameBuffer, FramebufferAttachment dest) {
+                GL.NamedFramebufferRenderbuffer(frameBuffer.Handle, dest, RenderbufferTarget.Renderbuffer, 0);
+            }
+        };
         public record Texture(Wrap.Texture img, uint mip = 0, uint layer = 0): Attachment() {
             public override Vector2i GetSize() => new Vector2i(
                 img.def.size.X >> (int)mip,
                 img.def.size.Y >> (int)mip);
             public override void Bind(FramebufferHandle frameBuffer, FramebufferAttachment dest) {
-                GL.NamedFramebufferTexture(frameBuffer.Handle, dest, (int)img.native, (int)mip);
+                GL.NamedFramebufferTextureLayer(frameBuffer.Handle, dest, (int)img.native, (int)mip, (int)layer);
             }
         };
         public abstract void Bind(FramebufferHandle frameBuffer, FramebufferAttachment dest);

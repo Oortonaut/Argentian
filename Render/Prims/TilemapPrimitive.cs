@@ -1,8 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using Argentian.Engine;
+using Argentian.Roguelike;
 using Argentian.Wrap;
 using OpenTK.Graphics.OpenGL;
 using OpenTK.Mathematics;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Argentian.Render.Prims {
     public class TilemapPrimitive: RenderPrimitive {
@@ -77,18 +81,27 @@ namespace Argentian.Render.Prims {
             public Texture texture;
             public Sampler sampler;
 
+            struct ShaderStorage {
+                public Vector2i tileSize; // source size
+                public Vector2i tileOrigin; // offset inside texture / top left spacing
+                public Vector2i tileGap; // includes any gap between tiles; from the left of the first tile to the left of the next, not including origin
+
+                public Vector2i tileCount; // number of tiles in each direction. calculated if non-positive.
+
+                // final position in cell
+                public Vector2 tileOffset; // offset the font in the cell
+
+                public Vector2 tileScale; // scale the font in the cell (for example, using a small font in a larger cell or shrinking to fit in a corner), final size
+            };
             internal void Bind(string prefix, IShaderProgram shader) {
-                // locate tiles
                 shader.SetUniform($"{prefix}.tileSize", tileSize);
                 shader.SetUniform($"{prefix}.tileOrigin", tileOrigin);
                 shader.SetUniform($"{prefix}.tileGap", tileGap);
                 shader.SetUniform($"{prefix}.tileCount", tileCount);
-                // final position in cell
                 shader.SetUniform($"{prefix}.tileOffset", tileOffset);
                 shader.SetUniform($"{prefix}.tileScale", tileScale);
                 shader.SetUniform($"{prefix}.fontSize", texture.Size);
 
-                // Set texture uniforms
                 shader.SetTexture($"{prefix}.texture", texture, sampler);
             }
         }
@@ -97,7 +110,7 @@ namespace Argentian.Render.Prims {
             public Vector2 viewportOrigin = Vector2.Zero;
 
             public TextBuf textBuffer = new TextBuf {
-                bufferSize = new Vector2i(132, 80), cursorPos = new Vector2i(1, -1), cursorColor = Vector3.One,
+                bufferSize = new Vector2i(40, 25), cursorPos = new Vector2i(1, -1), cursorColor = Vector3.One,
             };
 
             public FontDef[] fonts = new FontDef[8]; // Initialize array for up to 8 fonts
@@ -108,26 +121,65 @@ namespace Argentian.Render.Prims {
         public TextBuf textBuffer => def.textBuffer;
         public FontDef[] fonts => def.fonts;
         double time = 0;
+        private Layer<byte> corners = null;
         private Cell[,]? cells = null;
         public TypedBuffer<Cell> cellsBuffer;
 
         public void SetOrigin(Vector2 origin) {
             viewportOrigin = origin;
         }
+
+
+        void GenerateCells() {
+            int W = def.textBuffer.bufferSize.X, H = def.textBuffer.bufferSize.Y;
+            corners = new Layer<byte>(LayerGeometry.Square, new byte[H + 1, W + 1]);
+            corners.Fill(0);
+            corners.Line(1, new Vector2i(2, 2), new Vector2i(8, 5));
+            corners.Line(1, new Vector2i(2, 3), new Vector2i(6, 8));
+            var tiling = new Autotile(corners);
+            // tilesetter type layers
+            // 1. grass
+            // 2. dirt
+            // 3. stone
+            // 4. water
+            // 5. flowers
+            // 6. rough
+            // 7. beach
+            // 8. slime
+
+            var tilesetSize = new Vector2i(5, 24);
+            var templateMapping = Roguelike.Extensions.GenerateTemplateMapping(
+                "BadAttitudeTiles.png", tilesetSize, new Vector2i(32, 32), Vector2i.Zero,
+                0, 1, 2, 3, 4, 5, 6, 7, 8);
+
+            var tilesetterMapping = new Dictionary<uint, List<Cell>>();
+            foreach (var code in templateMapping.Keys) {
+                tilesetterMapping[code] = new List<Cell>();
+                var cell = new Cell {
+                    data = 0,
+                    fg = 0xFFFF,
+                    bg = 0x0000,
+                    flags = 0,
+                    stencil = 0,
+                };
+                var tileset = templateMapping[code];
+                foreach (var XY in tileset) {
+                    cell.data = (ushort)(XY.X + XY.Y * tilesetSize.X); // 5xN
+                    tilesetterMapping[code].Add(cell);
+                }
+            }
+            cells = tiling.ApplyDualWangCorner(tilesetterMapping);
+            for (int Y = 0; Y < H; Y++) {
+                for (int X = 0; X < W; X++) {
+                    cells[Y, X].fg = 0xFFFF;
+                }
+            }
+            cellsBuffer = new TypedBuffer<Cell>("cellsBuffer", cells, BufferStorageMask.DynamicStorageBit);
+        }
         public override void BindDraw() {
             var shader = Shader;
             if (cells == null) {
-                cells = new Cell[def.textBuffer.bufferSize.Y, def.textBuffer.bufferSize.X];
-                for (int Y = 0; Y < def.textBuffer.bufferSize.Y; Y++) {
-                    for (int X = 0; X < def.textBuffer.bufferSize.X; X++) {
-                        cells[Y, X] = new Cell {
-                            data = (ushort)(X + Y * 12),
-                            fg = 0x0FFF,
-                            bg = 0x0000,
-                        };
-                    }
-                }
-                cellsBuffer = new TypedBuffer<Cell>("cellsBuffer", cells, BufferStorageMask.DynamicStorageBit);
+                GenerateCells();
             }
 
             // Set viewport uniforms

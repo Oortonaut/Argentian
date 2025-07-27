@@ -201,10 +201,22 @@ namespace Argentian.Wrap {
         public static TPixel[] LoadImage<TPixel>(Stream stream) where TPixel : unmanaged, IPixel<TPixel> {
             SixLabors.ImageSharp.Image<TPixel> fileImage = SixLabors.ImageSharp.Image.Load<TPixel>(stream);
 
-            var size = new Vector2i(fileImage.Width, fileImage.Height);
-
+            int W = fileImage.Width;
+            int H = fileImage.Height;
             var result = new TPixel[fileImage.Height * fileImage.Width] ?? throw new InsufficientMemoryException("Couldn't allocate temporary image buffer");
             fileImage.CopyPixelDataTo(result);
+            return result;
+        }
+        public static TPixel[,] LoadImage2D<TPixel>(Stream stream) where TPixel : unmanaged, IPixel<TPixel> {
+            SixLabors.ImageSharp.Image<TPixel> fileImage = SixLabors.ImageSharp.Image.Load<TPixel>(stream);
+
+            int W = fileImage.Width;
+            int H = fileImage.Height;
+            var result = new TPixel[fileImage.Height, fileImage.Width] ?? throw new InsufficientMemoryException("Couldn't allocate temporary image buffer");
+
+            for (int y = 0; y < H; y++)
+            for (int x = 0; x < W; x++)
+                result[y, x] = fileImage[x, y];
             return result;
         }
     }
