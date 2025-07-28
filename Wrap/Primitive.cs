@@ -24,31 +24,6 @@ namespace Argentian.Wrap {
         public void SubmitDraw();
         public PassFlags Flags { get; }
     }
-    public class ComputePrimitive: Wrap.Disposable, IPrimitive {
-        public ComputePrimitive(string name_, ShaderProgram shader_, Vector3i size_ = new Vector3i()) : base(name_) {
-            shader = shader_;
-            size = size_;
-            //GroupSize = shader.GetUniformVector3i(shader.Location(ProgramInterface.Uniform, "gl_WorkGroupSize"));
-        }
-        public readonly Vector3i GroupSize;
-        public Vector3i size; // Stuff like setting the domain into the shader is part of the pass along with the computation setup
-        readonly ShaderProgram shader;
-        public void BindDraw() {}
-        public static uint Intervals(uint x, uint y) {
-            return (x + y - 1) / y;
-        }
-        public void SubmitDraw() {
-            shader.Bind();
-            uint x = Intervals((uint)size.X, (uint)GroupSize.X); //
-            uint y = Intervals((uint)size.Y, (uint)GroupSize.Y); //
-            uint z = Intervals((uint)size.Z, (uint)GroupSize.Z); //
-            GL.DispatchCompute(x, y, z);
-        }
-        public virtual void Tick(double DeltaTime) {}
-        protected override void Delete() {}
-        public IShaderProgram Shader => shader;
-        public PassFlags Flags => PassFlags.None;
-    }
     public class RenderPrimitive: Wrap.Disposable, IPrimitive {
         public enum Winding {
             CW = -1, // DirectX
@@ -57,8 +32,8 @@ namespace Argentian.Wrap {
         }
         public record VertexAttrib(
             string name,
-            uint width, // number of element
-            uint offset, // word
+            uint width,
+            uint offset,
             VertexAttribType type = VertexAttribType.Float,
             bool normalized = false
         ) { }
@@ -72,6 +47,13 @@ namespace Argentian.Wrap {
             public PrimitiveType primitiveType = PrimitiveType.Triangles;
             public List<StreamDef> vertexStreams = new();
             public Winding windingMode = Winding.CW;
+
+            public virtual Def Conform() {
+                if (vertexStreams.Count == 0) {
+                    throw new InvalidOperationException("Vertex streams must be defined");
+                }
+                return this;
+            }
         }
         public Def def;
         //--- Data -----------
@@ -92,8 +74,11 @@ namespace Argentian.Wrap {
             base(name_)
         {
             shader = shader_;
-            def = format_;
+            def = format_.Conform();
             vertexBuffer = vb;
+            if (vertexBuffer.Length != def.vertexStreams.Count) {
+                throw new InvalidOperationException("Vertex buffer count must match vertex stream count");
+            }
             indexBuffer = ib;
             vertexArrayNative = new VertexArrayHandle(GL.CreateVertexArray());
             int vertexHandle = vertexArrayNative.Handle;
@@ -148,10 +133,10 @@ namespace Argentian.Wrap {
         private ulong elapsedTime = 0;
         public double GetElapsedTime() => (double)elapsedTime / 1e6;
         public virtual void BindDraw() {
-            shader.Bind();
             GL.BindVertexArray(vertexArrayNative.Handle);
         }
         public void SubmitDraw() {
+            shader.Bind();
             BindDraw();
             //shader.SetUniform("time", () => (double)sw.ElapsedTicks / (double)Stopwatch.Frequency);
             DrawElementsType elementType = indexBuffer.stride.X switch {

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Argentian.Engine;
 using Argentian.Roguelike;
@@ -15,7 +16,7 @@ namespace Argentian.Render.Prims {
             string name_,
             Renderer renderer,
             ShaderProgram shader_,
-            Def format_): base(name_, shader_, format_, [renderer.screenQuadVB], renderer.screenQuadIB) {
+            Def format_): base(name_, shader_, format_.Conform(), [renderer.screenQuadVB], renderer.screenQuadIB) {
             def = format_;
             viewportOrigin = def.viewportOrigin;
         }
@@ -36,7 +37,7 @@ namespace Argentian.Render.Prims {
         }
 
         // Static information about the spacing and indexing
-        public struct TextBuf {
+        public class TextBuf {
             public TilemapFlags flags;
             public Vector2i bufferSize; // size of the buffer in cells
 
@@ -62,9 +63,11 @@ namespace Argentian.Render.Prims {
                 // Set cell offset uniforms
                 shader.SetUniform($"{prefix}.cellOffset", cellOffset);
             }
+
+            public TextBuf Conform() { return this;  }
         }
 
-        public struct FontDef {
+        public class FontDef {
             // locate tiles inside texture
             public Vector2i tileSize; // source size
             public Vector2i tileOrigin; // offset inside texture / top left spacing
@@ -81,18 +84,6 @@ namespace Argentian.Render.Prims {
             public Texture texture;
             public Sampler sampler;
 
-            struct ShaderStorage {
-                public Vector2i tileSize; // source size
-                public Vector2i tileOrigin; // offset inside texture / top left spacing
-                public Vector2i tileGap; // includes any gap between tiles; from the left of the first tile to the left of the next, not including origin
-
-                public Vector2i tileCount; // number of tiles in each direction. calculated if non-positive.
-
-                // final position in cell
-                public Vector2 tileOffset; // offset the font in the cell
-
-                public Vector2 tileScale; // scale the font in the cell (for example, using a small font in a larger cell or shrinking to fit in a corner), final size
-            };
             internal void Bind(string prefix, IShaderProgram shader) {
                 shader.SetUniform($"{prefix}.tileSize", tileSize);
                 shader.SetUniform($"{prefix}.tileOrigin", tileOrigin);
@@ -104,6 +95,13 @@ namespace Argentian.Render.Prims {
 
                 shader.SetTexture($"{prefix}.texture", texture, sampler);
             }
+
+            public FontDef Conform() {
+                if (tileCount.X <= 0 || tileCount.Y <= 0) {
+                    tileCount = (texture.Size - tileOrigin) / (tileSize + tileGap);
+                }
+                return this;
+            }
         }
         public new class Def: RenderPrimitive.Def {
             // dynamic defaults
@@ -113,7 +111,15 @@ namespace Argentian.Render.Prims {
                 bufferSize = new Vector2i(40, 25), cursorPos = new Vector2i(1, -1), cursorColor = Vector3.One,
             };
 
-            public FontDef[] fonts = new FontDef[8]; // Initialize array for up to 8 fonts
+            public FontDef[] fonts = []; // Initialize array for up to 8 fonts
+
+            public override Def Conform() {
+                for (int i = 0; i < fonts.Length; ++i) {
+                    fonts[i] = fonts[i].Conform();
+                }
+                textBuffer = textBuffer.Conform();
+                return base.Conform() as Def;
+            }
         }
 
         public Vector2 viewportOrigin = Vector2.Zero;
@@ -129,7 +135,6 @@ namespace Argentian.Render.Prims {
             viewportOrigin = origin;
         }
 
-
         void GenerateCells() {
             int W = def.textBuffer.bufferSize.X, H = def.textBuffer.bufferSize.Y;
             corners = new Layer<byte>(LayerGeometry.Square, new byte[H + 1, W + 1]);
@@ -144,16 +149,16 @@ namespace Argentian.Render.Prims {
             // 4. water
             // 5. flowers
             // 6. rough
-            // 7. beach
+            // 7. beache
             // 8. slime
 
-            var tilesetSize = new Vector2i(5, 24);
+            var tilesetSize = new Vector2i(30, 13);
             var templateMapping = Roguelike.Extensions.GenerateTemplateMapping(
                 "BadAttitudeTiles.png", tilesetSize, new Vector2i(32, 32), Vector2i.Zero,
-                0, 1, 2, 3, 4, 5, 6, 7, 8);
+                0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 
             var tilesetterMapping = new Dictionary<uint, List<Cell>>();
-            foreach (var code in templateMapping.Keys) {
+            foreach (var (code, tileset) in templateMapping) {
                 tilesetterMapping[code] = new List<Cell>();
                 var cell = new Cell {
                     data = 0,
@@ -162,7 +167,6 @@ namespace Argentian.Render.Prims {
                     flags = 0,
                     stencil = 0,
                 };
-                var tileset = templateMapping[code];
                 foreach (var XY in tileset) {
                     cell.data = (ushort)(XY.X + XY.Y * tilesetSize.X); // 5xN
                     tilesetterMapping[code].Add(cell);

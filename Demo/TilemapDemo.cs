@@ -34,17 +34,15 @@ namespace Argentian {
                 },
                 fonts = [
                     new TilemapPrimitive.FontDef {
-                        tileCount = new Vector2i(5, 24),
                         tileSize = new Vector2i(32, 32),
                         tileScale = new Vector2(1, 1),
                         texture = Caches.Textures.Get("BadAttitudeTiles.png"),
                         sampler = Caches.Samplers.Get("nearest.samp"),
                     },
                     new TilemapPrimitive.FontDef {
-                        tileCount = new Vector2i(12, 32),
-                        tileSize = new Vector2i(32, 32),
+                        tileSize = new Vector2i(16, 16),
                         tileScale = new Vector2(1, 1),
-                        texture = Caches.Textures.Get("NewTown.bmp"),
+                        texture = Caches.Textures.Get("autotile47.png"),
                         sampler = Caches.Samplers.Get("nearest.samp"),
                     }
                 ],

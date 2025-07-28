@@ -199,6 +199,7 @@ namespace Argentian.Wrap {
                 GL.UseProgram(handle.Handle);
                 validate = true;
             }
+            nextUnit = 0;
             foreach (var name in uniformBindings.Keys) {
                 var binding = uniformBindings[name];
                 if (binding.dirty) {

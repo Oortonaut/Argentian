@@ -27,3 +27,4 @@ media
 /Editor/.vs/
 /obj/
 /Editor/obj/
+**/textures/*

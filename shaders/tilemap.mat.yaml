@@ -5,5 +5,5 @@ vertex:
 - tilemap.vert.gl
 fragment:
 - tilemap.frag.gl
-unitMode: Layout
+unitMode: Increment
 ...

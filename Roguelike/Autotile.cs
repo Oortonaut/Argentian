@@ -31,16 +31,17 @@ namespace Argentian.Roguelike {
                 for (int X = 0; X < patternSize.X; ++X) {
                     Vector2i XY = tileOffset + new Vector2i(X, Y);
                     Vector2i P = XY * tileSize;
-                    int cornerRadius = 4;
+                    int cornerRadius = 7;
+                    int matchColorRadius = 21;
                     // test the four interior corners
                     var C0 = CharacterizeColor(P.X, P.Y, 1, 1, cornerRadius);
                     var C1 = CharacterizeColor(P.X, P.Y, -1, 1, cornerRadius);
                     var C2 = CharacterizeColor(P.X, P.Y, 1, -1, cornerRadius);
                     var C3 = CharacterizeColor(P.X, P.Y, -1, -1, cornerRadius);
-                    var C0c = Math.Clamp(MatchColor(C0), 0, partsLength);
-                    var C1c = Math.Clamp(MatchColor(C1), 0, partsLength);
-                    var C2c = Math.Clamp(MatchColor(C2), 0, partsLength);
-                    var C3c = Math.Clamp(MatchColor(C3), 0, partsLength);
+                    var C0c = Math.Clamp(MatchColor(C0, matchColorRadius), 0, partsLength);
+                    var C1c = Math.Clamp(MatchColor(C1, matchColorRadius), 0, partsLength);
+                    var C2c = Math.Clamp(MatchColor(C2, matchColorRadius), 0, partsLength);
+                    var C3c = Math.Clamp(MatchColor(C3, matchColorRadius), 0, partsLength);
                     uint code = 0;
                     code += parts[C0c] * 0x01_00_00_00;
                     code += parts[C1c] * 0x00_01_00_00;
@@ -54,7 +55,7 @@ namespace Argentian.Roguelike {
             }
             return result;
             //////////////////////////////////////////////////////////////////
-            Color4<Rgba> CharacterizeColor(int X, int Y, int DX, int DY, int radius = 3) {
+            Color4<Rgba> CharacterizeColor(int X, int Y, int DX, int DY, int radius) {
                 if (DX < 0) {
                     X += tileSize.X + DX;
                 }
@@ -66,6 +67,7 @@ namespace Argentian.Roguelike {
                 }
                 Color4<Rgba> mean = new();
 
+                int count = 0;
                 for (int IY = 0; IY < radius; ++IY) {
                     for (int IX = 0; IX < radius; ++IX) {
                         var colorRaw = textureData[Y + IY * DY, X + IX * DX];
@@ -74,13 +76,16 @@ namespace Argentian.Roguelike {
                         mean.Y += color.Y;
                         mean.Z += color.Z;
                         mean.W += color.W;
+                        ++count;
                     }
                 }
-                mean.X /= radius * radius;
-                mean.Y /= radius * radius;
-                mean.Z /= radius * radius;
-                mean.W /= radius * radius;
+                mean.X /= count;
+                mean.Y /= count;
+                mean.Z /= count;
+                mean.W /= count;
 
+                return mean;
+/*
                 var bestFit = textureData[Y, X].ToColor4();
                 var bestDist = mean.Dist(bestFit);
                 for (int IY = 0; IY < radius && bestDist > 0; ++IY) {
@@ -93,11 +98,11 @@ namespace Argentian.Roguelike {
                         }
                     }
                 }
-                return bestFit;
+                return bestFit;*/
                 /////////////////////////////////////
             }
 
-            int MatchColor(Color4<Rgba> color, float radius = 6) {
+            int MatchColor(Color4<Rgba> color, float radius) {
                 var found = foundColors.FindIndex((c)  => {
                     var dr = color.X - c.X;
                     var dg = color.Y - c.Y;
@@ -144,7 +149,7 @@ namespace Argentian.Roguelike {
         }
         public T Selector(int X, int Y, params T[] options) {
             if (Y >= 0 && X >= 0 && Y < size.Y && X < size.X) {
-                if (options.Contains(cells[Y, X])) {
+                if (options.Length == 0 || options.Contains(cells[Y, X])) {
                     return cells[Y, X];
                 };
             }
@@ -206,15 +211,15 @@ namespace Argentian.Roguelike {
     public struct Autotile(Layer<byte> Layer) {
         public uint CalcDualWangCornerSelector(Vector2i position, params byte[] selectors) {
             uint result = 0;
-            byte sel0 = layer.Selector(position.X + 1, position.Y + 1, selectors);
-            byte sel1 = layer.Selector(position.X, position.Y + 1, selectors);
-            byte sel2 = layer.Selector(position.X + 1, position.Y, selectors);
-            byte sel3 = layer.Selector(position.X, position.Y, selectors);
+            byte sel0 = layer.Selector(position.X, position.Y, selectors);
+            byte sel1 = layer.Selector(position.X + 1, position.Y, selectors);
+            byte sel2 = layer.Selector(position.X, position.Y + 1, selectors);
+            byte sel3 = layer.Selector(position.X + 1, position.Y + 1, selectors);
 
-            result |= (uint)sel0 * 0x1;
-            result |= (uint)sel1 * 0x100;
-            result |= (uint)sel2 * 0x10000;
-            result |= (uint)sel3 * 0x1000000;
+            result |= (uint)sel3 * 0x00_00_00_01;
+            result |= (uint)sel2 * 0x00_00_01_00;
+            result |= (uint)sel1 * 0x00_01_00_00;
+            result |= (uint)sel0 * 0x01_00_00_00;
             return result;
         }
 
@@ -225,7 +230,7 @@ namespace Argentian.Roguelike {
 
             for (int Y = 0; Y < layer.size.Y; ++Y) {
                 for (int X = 0; X < layer.size.X; ++X) {
-                    uint code = CalcDualWangCornerSelector(new Vector2i(X, Y), 1);
+                    uint code = CalcDualWangCornerSelector(new Vector2i(X, Y));
                     if (code > 0 && mapping.TryGetValue(code, out var cells)) {
                         result[Y, X] = cells[0];
                     }

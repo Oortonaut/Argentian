@@ -41,6 +41,7 @@
 
   <ItemGroup>
     <Folder Include="Render\Passes\" />
+    <Folder Include="textures\pipoya\" />
   </ItemGroup>
 
 </Project>
