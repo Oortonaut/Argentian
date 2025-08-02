@@ -19,13 +19,20 @@ namespace Argentian {
         protected Framebuffer framebuffer;
         protected Renderer renderer;
         protected Stopwatch sw = Stopwatch.StartNew();
+        protected DateTime startTime = DateTime.Now;
+        protected DateTime Now => startTime + sw.Elapsed;
+        public InputQueue InputQueue;
 
         protected Application(string title, Renderer inRenderer) : base(title) {
             renderer = inRenderer;
+            InputQueue = new InputQueue();
             InitializeSamplers();
         }
 
         private void InitializeSamplers() {
+            // TODO: Have a yaml file with all of the various default textures,
+            // samplers, buffers, etc.
+
             Caches.SamplerDefs.Insert("nearest.samp", new Sampler.Def {
                 magFilter = TextureMagFilter.Nearest,
                 minFilter = TextureMinFilter.Nearest,
