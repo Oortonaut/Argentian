@@ -9,77 +9,6 @@ using SixLabors.ImageSharp.Formats.Bmp;
 using SixLabors.ImageSharp.Formats.Png;
 
 namespace Argentian.Wrap {
-    public class Texture: Disposable {
-        public class Def {
-            public TextureTarget target;
-
-
-            // from user if no filename, otherwise from file
-            public Vector2i size = Vector2i.Zero;
-            public PixelFormat format = PixelFormat.Rgba;
-            public InternalFormat internalFormat = InternalFormat.Rgba8;
-            public PixelType type = PixelType.UnsignedByte;
-        }
-
-        public readonly Def def;
-        public Texture(string name, Def def_): base(name) {
-            def = def_;
-            native = new TextureHandle(GL.CreateTexture(TextureTarget.Texture2d));
-            GL.ObjectLabel(ObjectIdentifier.Texture, (uint)native.Handle, Name.Length, Name);
-            CreateStorage(def);
-        }
-        public TextureHandle native;
-        protected override void Delete() {
-            GL.DeleteTexture(native.Handle);
-        }
-        public override string ToString() => $"Texture {native.Handle} '{Name}'{def.size}/{def.internalFormat}{DisposedString}";
-        public Vector2i Size => def.size;
-
-        void CreateStorage(Def def) {
-            switch (def.target) {
-            case TextureTarget.Texture2d:
-                GL.TextureStorage2D(
-                    native.Handle,
-                    1,
-                    (SizedInternalFormat)def.internalFormat,
-                    def.size.X,
-                    def.size.Y);
-                var err = GL.GetError();
-                break;
-            default:
-                throw new InvalidDataException("Unsupported");
-            }
-        }
-        public bool Set<T>(Vector2i size, PixelFormat fmt, PixelType type, T[] pixels, int mip = -1) where T : unmanaged {
-            bool automip = false;
-            if (mip == -1) {
-                mip = 0;
-                automip = true;
-            }
-            switch (def.target) {
-            case TextureTarget.Texture2d:
-                GL.TextureSubImage2D(
-                    native.Handle,
-                    mip,
-                    0,
-                    0,
-                    def.size.X,
-                    def.size.Y,
-                    def.format,
-                    def.type,
-                    in pixels[0]);
-                break;
-            default:
-                throw new InvalidDataException("Unsupported");
-            }
-            if (automip) {
-                GL.GenerateTextureMipmap(native.Handle);
-            }
-            // GL.TextureParameter(handle.Handle, TextureParameterName.TextureMinLod, 0);
-            // GL.TextureParameter(handle.Handle, TextureParameterName.TextureMaxLod, 0);
-            return true;
-        }
-    }
     public static partial class Extensions {
         public static Texture LoadTexture(string path) {
             //Load the image
@@ -218,6 +147,77 @@ namespace Argentian.Wrap {
             for (int x = 0; x < W; x++)
                 result[y, x] = fileImage[x, y];
             return result;
+        }
+    }
+    public class Texture: Disposable {
+        public class Def {
+            public TextureTarget target;
+
+
+            // from user if no filename, otherwise from file
+            public Vector2i size = Vector2i.Zero;
+            public PixelFormat format = PixelFormat.Rgba;
+            public InternalFormat internalFormat = InternalFormat.Rgba8;
+            public PixelType type = PixelType.UnsignedByte;
+        }
+
+        public readonly Def def;
+        public Texture(string name, Def def_): base(name) {
+            def = def_;
+            native = new TextureHandle(GL.CreateTexture(TextureTarget.Texture2d));
+            GL.ObjectLabel(ObjectIdentifier.Texture, (uint)native.Handle, Name.Length, Name);
+            CreateStorage(def);
+        }
+        public TextureHandle native;
+        protected override void Delete() {
+            GL.DeleteTexture(native.Handle);
+        }
+        public override string ToString() => $"Texture {native.Handle} '{Name}'{def.size}/{def.internalFormat}{DisposedString}";
+        public Vector2i Size => def.size;
+
+        void CreateStorage(Def def) {
+            switch (def.target) {
+            case TextureTarget.Texture2d:
+                GL.TextureStorage2D(
+                    native.Handle,
+                    1,
+                    (SizedInternalFormat)def.internalFormat,
+                    def.size.X,
+                    def.size.Y);
+                var err = GL.GetError();
+                break;
+            default:
+                throw new InvalidDataException("Unsupported");
+            }
+        }
+        public bool Set<T>(Vector2i size, PixelFormat fmt, PixelType type, T[] pixels, int mip = -1) where T : unmanaged {
+            bool automip = false;
+            if (mip == -1) {
+                mip = 0;
+                automip = true;
+            }
+            switch (def.target) {
+            case TextureTarget.Texture2d:
+                GL.TextureSubImage2D(
+                    native.Handle,
+                    mip,
+                    0,
+                    0,
+                    def.size.X,
+                    def.size.Y,
+                    def.format,
+                    def.type,
+                    in pixels[0]);
+                break;
+            default:
+                throw new InvalidDataException("Unsupported");
+            }
+            if (automip) {
+                GL.GenerateTextureMipmap(native.Handle);
+            }
+            // GL.TextureParameter(handle.Handle, TextureParameterName.TextureMinLod, 0);
+            // GL.TextureParameter(handle.Handle, TextureParameterName.TextureMaxLod, 0);
+            return true;
         }
     }
 }
