@@ -35,7 +35,7 @@ namespace Argentian {
             renderer = new Renderer();
 
             //app = new CapyScrollDemo(title, renderer);
-            app = new TilemapDemo(title, renderer);
+            app = new TilemapDemo(title, renderer, new Vector3i(128, 128, 16));
             app.AttachToWindow(window);
         }
         void Run() {

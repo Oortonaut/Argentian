@@ -113,7 +113,7 @@ namespace Argentian.Wrap {
             : base(name_, count_, flags_) {
             mapping = (T*)GL.MapNamedBufferRange(native.Handle, IntPtr.Zero, stride.W, access_);
         }
-        public unsafe Span<T> Map() => new Span<T>((T*)mapping, stride.W);
+        public unsafe Span<T> Map => new Span<T>((T*)mapping, stride.W / stride.X);
         protected T* mapping;
         protected override void Delete() {
             base.Delete();

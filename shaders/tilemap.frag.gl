@@ -27,6 +27,7 @@ vec4 decodeColor(U16 c_) {
 }
 
 vec4 sampleFont(U16 data, vec2 cellPixel) {
+    if (data == 0u) { return vec4(0, 0, 0, 0); }
     uint tex = uint(data >> 12);
     uint chr = data & 0xFFFu;
 

@@ -10,31 +10,37 @@ using OpenTK.Mathematics;
 using SixLabors.ImageSharp.PixelFormats;
 
 namespace Argentian.Render.Prims {
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    public struct Cell {
+        public ushort data;
+        public ushort fg; // 4 4 4 4
+        public ushort bg; // 4 4 4 4
+        public byte flags;
+        public byte stencil;
+    };
+    public struct LandscapeCell {
+        public ushort layer0;
+        public ushort layer1;
+        public ushort layer2;
+        public ushort lighting; // 4 4 4 4 at corners UL\UR\LL\LR
+    };
+    [Flags]
+    public enum TilemapFlags: uint {
+        None = 0,
+        WrapX = 1 << 0,
+        WrapY = 1 << 1,
+    }
     public class TilemapPrimitive: RenderPrimitive {
 
         public TilemapPrimitive(
             string name_,
             Renderer renderer,
-            ShaderProgram shader_,
+            IShaderProgram shader_,
             Def format_): base(name_, shader_, format_.Conform(), [renderer.screenQuadVB], renderer.screenQuadIB) {
             def = format_;
             viewportOrigin = def.viewportOrigin;
         }
         // Dynamic
-        [StructLayout(LayoutKind.Sequential, Pack = 1)]
-        public struct Cell {
-            public ushort data;
-            public ushort fg; // 4 4 4 4
-            public ushort bg; // 4 4 4 4
-            public byte flags;
-            public byte stencil;
-        };
-
-        [Flags]
-        public enum TilemapFlags: uint {
-            WrapX = 1 << 0,
-            WrapY = 1 << 1,
-        }
 
         // Static information about the spacing and indexing
         public class TextBuf {
@@ -126,65 +132,25 @@ namespace Argentian.Render.Prims {
         public new Def def;
         public TextBuf textBuffer => def.textBuffer;
         public FontDef[] fonts => def.fonts;
-        double time = 0;
         private Layer<byte> corners = null;
-        private Cell[,]? cells = null;
-        public TypedBuffer<Cell> cellsBuffer;
+        //private Cell[,]? cells = null;
+        public MappedBuffer<Cell>? cellsBuffer = null;
 
         public void SetOrigin(Vector2 origin) {
             viewportOrigin = origin;
         }
-
-        void GenerateCells() {
-            int W = def.textBuffer.bufferSize.X, H = def.textBuffer.bufferSize.Y;
-            corners = new Layer<byte>(LayerGeometry.Square, new byte[H + 1, W + 1]);
-            corners.Fill(0);
-            corners.Line(1, new Vector2i(2, 2), new Vector2i(8, 5));
-            corners.Line(1, new Vector2i(2, 3), new Vector2i(6, 8));
-            var tiling = new Autotile(corners);
-            // tilesetter type layers
-            // 1. grass
-            // 2. dirt
-            // 3. stone
-            // 4. water
-            // 5. flowers
-            // 6. rough
-            // 7. beache
-            // 8. slime
-
-            var tilesetSize = new Vector2i(30, 13);
-            var templateMapping = Roguelike.Extensions.GenerateTemplateMapping(
-                "BadAttitudeTiles.png", tilesetSize, new Vector2i(32, 32), Vector2i.Zero,
-                0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-
-            var tilesetterMapping = new Dictionary<uint, List<Cell>>();
-            foreach (var (code, tileset) in templateMapping) {
-                tilesetterMapping[code] = new List<Cell>();
-                var cell = new Cell {
-                    data = 0,
-                    fg = 0xFFFF,
-                    bg = 0x0000,
-                    flags = 0,
-                    stencil = 0,
-                };
-                foreach (var XY in tileset) {
-                    cell.data = (ushort)(XY.X + XY.Y * tilesetSize.X); // 5xN
-                    tilesetterMapping[code].Add(cell);
-                }
+        public void SetCells(Layer<Cell> layer) {
+            if (cellsBuffer == null) {
+                cellsBuffer = new MappedBuffer<Cell>($"{Name} cells buffer", layer.size.X * layer.size.Y);
             }
-            cells = tiling.ApplyDualWangCorner(tilesetterMapping);
-            for (int Y = 0; Y < H; Y++) {
-                for (int X = 0; X < W; X++) {
-                    cells[Y, X].fg = 0xFFFF;
-                }
-            }
-            cellsBuffer = new TypedBuffer<Cell>("cellsBuffer", cells, BufferStorageMask.DynamicStorageBit);
+
+            var from = layer.Map;
+            var to = cellsBuffer.Map;
+            from.CopyTo(to);
         }
+
         public override void BindDraw() {
             var shader = Shader;
-            if (cells == null) {
-                GenerateCells();
-            }
 
             // Set viewport uniforms
             shader.SetUniform("vp.origin", def.viewportOrigin);
@@ -198,11 +164,7 @@ namespace Argentian.Render.Prims {
                 }
             }
 
-            // Set time uniform
-            shader.SetUniform("time", time);
-
             // THIS IS PERFORMANCE!
-            cellsBuffer.Set(cells!);
             shader.SetShaderStorageBlock($"cells", cellsBuffer);
             def.textBuffer.Bind("buf", shader);
 

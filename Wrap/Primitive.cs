@@ -64,10 +64,10 @@ namespace Argentian.Wrap {
         int indexCount = -1;
         uint instanceBase = 0;
         int instanceCount = 1;
-        public readonly ShaderProgram shader;
+        public readonly IShaderProgram shader;
         public RenderPrimitive(
             string name_,
-            ShaderProgram shader_,
+            IShaderProgram shader_,
             Def format_,
             GpuBuffer[] vb,
             GpuBuffer ib) :

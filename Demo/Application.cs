@@ -21,11 +21,9 @@ namespace Argentian {
         protected Stopwatch sw = Stopwatch.StartNew();
         protected DateTime startTime = DateTime.Now;
         protected DateTime Now => startTime + sw.Elapsed;
-        public InputQueue InputQueue;
 
-        protected Application(string title, Renderer inRenderer) : base(title) {
-            renderer = inRenderer;
-            InputQueue = new InputQueue();
+        protected Application(string title, Renderer renderer) : base(title) {
+            this.renderer = renderer;
             InitializeSamplers();
         }
 
