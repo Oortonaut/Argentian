@@ -202,12 +202,12 @@ namespace Argentian.Roguelike {
         public static Vector2 Gradient(int axis, Vector2 a, Vector2 b) {
             Vector2 slope = Vector2.Zero;
             float dX = b[axis] - a[axis];
-            slope[axis] = 1.0f;
+            slope[axis] = Math.Sign(dX);
             slope[1 - axis] = (b[1 - axis] - a[1 - axis]) / dX;
             return slope;
         }
 
-        public IEnumerable<Vector2> DDA(Vector2 from, Vector2 to, int axis, float threshold = 0.5f, bool includeEndpoint = false) {
+        public IEnumerable<Vector2> DDA(Vector2 from, Vector2 to, int axis, float center = 0.5f, bool includeEndpoint = false) {
             float FloorFrac(float x) {
                 return x - (float)Math.Floor(x);
             }
@@ -215,8 +215,6 @@ namespace Argentian.Roguelike {
                 return (float)Math.Ceiling(x) - x;
             }
 
-            from -= threshold;
-            to -= threshold;
             float dX = to[axis] - from[axis];
 
             if (dX == 0) {
@@ -225,36 +223,50 @@ namespace Argentian.Roguelike {
 
             Vector2 slope = Gradient(axis, from, to);
 
+            var last = from;
+
             float T;
             if (dX > 0) {
-                T = CeilFrac(from[axis]);
+                T = CeilFrac(from[axis] - center);
             } else {
-                T = FloorFrac(from[axis]);
-                slope = -slope;
+                T = FloorFrac(from[axis] - center);
             }
 
-            Vector2 next = from + slope * T;
+            Vector2 curr() => from + slope * T;
 
             // Step through the line, yielding crossing points
             //while ((dX > 0 && next[axis] < to[axis]) || (dX < 0 && next[axis] > to[axis])) {
-            while (dX > 0 ? next[axis] < to[axis] : next[axis] > to[axis]) {
-                yield return from + threshold;
-                from = next;
-                next += slope;
+            while (dX > 0 ? last[axis] < to[axis] : last[axis] > to[axis]) {
+                if (T > 0) {
+                    yield return last;
+                }
+                last = curr();
+                T += 1;
             }
 
             // Optionally include the endpoint
             if (includeEndpoint) {
-                yield return from + threshold;
+                //yield return last;
             }
         }
 
         public void Line(T cell, Vector2i from, Vector2i to, bool includeEndpoint = true) {
-            Vector2i d = to - from;
+            var PixelCenter = new Vector2(0.5f, 0.5f);;
+            Line(cell, from.ToVector2() + PixelCenter, to.ToVector2() + PixelCenter, includeEndpoint);
+        }
+        public void Line(T cell, Vector2 from, Vector2 to, bool includeEndpoint = true) {
+            float center = 1.0f;
+            Console.WriteLine($"Line({from}, {to}) / center: {center}");
+            Vector2 d = to - from;
             int axis = Math.Abs(d.X) > Math.Abs(d.Y) ? 0 : 1;
-            foreach (var point in DDA(from.ToVector2() + 0.5f, to.ToVector2() + 0.5f, axis, includeEndpoint: includeEndpoint)) {
+            int resultNo = 0;
+            foreach (var point in DDA(from, to, axis, center, includeEndpoint: includeEndpoint)) {
                 if (IsValid(point)) {
-                    this[(int)point.Y, (int)point.X] = cell;
+                    int px = (int)point.X;
+                    int py = (int)point.Y;
+                    this[py, px] = cell;
+                    Console.WriteLine($"[{resultNo}]: {point} @ {px}, {py}");
+                    ++resultNo;
                 }
             }
         }

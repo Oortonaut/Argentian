@@ -92,28 +92,38 @@ namespace Argentian {
         void GenerateCells() {
             var corners = MapLayers[0].Data;
             corners.Fill(5);
-            MapLayers[0].Data.FillRect(3, new Vector2i(2, 5), new Vector2i(11, 15));
-            MapLayers[0].Data.FillRect(4, new Vector2i(5, 8), new Vector2i(14, 18));
-            corners.Line(2, 3.0f, new Vector2i(15, 3), new Vector2i(30, 3));
-            corners.Line(3, new Vector2i(15, 3), new Vector2i(30, 3));
-            corners.Line(2, 3.0f, new Vector2i(15, 10), new Vector2i(30, 15));
-            corners.Line(3, new Vector2i(15, 10), new Vector2i(30, 15));
-            corners.Line(2, 3.0f, new Vector2i(3, 15), new Vector2i(3, 30));
-            corners.Line(2, 3.0f, new Vector2i(10, 15), new Vector2i(15, 30));
-            corners.Line(8, 1.5f, new Vector2i(25, 41), new Vector2i(3, 14));
-            //corners.Line(2, new Vector2i(2, 3), new Vector2i(26, 18));
-            corners.Polygon(6, 1.25f,
-                new Vector2i(12, 8),
-                new Vector2i(16, 12),
-                new Vector2i(12, 16),
-                new Vector2i(8, 12)
-                );
-            corners.Polygon(7,
-                new Vector2i(12, 8),
-                new Vector2i(16, 12),
-                new Vector2i(12, 16),
-                new Vector2i(8, 12)
-            );
+            //MapLayers[0].Data.FillRect(3, new Vector2i(2, 5), new Vector2i(11, 15));
+            //MapLayers[0].Data.FillRect(4, new Vector2i(5, 8), new Vector2i(14, 18));
+            // corners.Line(2, new Vector2i(2, 2), new Vector2i(5, 3));
+            // corners.Line(2, new Vector2i(2, 6), new Vector2i(5, 8));
+            // corners.Line(2, new Vector2i(2, 10), new Vector2i(5, 13));
+            // corners.Line(2, new Vector2i(2, 14), new Vector2i(5, 18));
+            //
+            corners.Line(2, new Vector2(8.0f ,  6.5f), new Vector2(12.0f ,  7.5f));
+            corners.Line(2, new Vector2(8.25f, 10.5f), new Vector2(12.25f, 11.5f));
+            corners.Line(2, new Vector2(8.5f , 14.5f), new Vector2(12.5f , 15.5f));
+            corners.Line(2, new Vector2(8.75f, 18.5f), new Vector2(12.75f, 19.5f));
+
+            //corners.Line(2, 3.0f, new Vector2i(15, 3), new Vector2i(30, 3));
+            //corners.Line(3, new Vector2i(15, 3), new Vector2i(30, 3));
+            //corners.Line(2, 3.0f, new Vector2i(15, 10), new Vector2i(30, 15));
+            //corners.Line(3, new Vector2i(15, 10), new Vector2i(30, 15));
+            //corners.Line(2, 3.0f, new Vector2i(3, 15), new Vector2i(3, 30));
+            //corners.Line(2, 3.0f, new Vector2i(10, 15), new Vector2i(15, 30));
+            //corners.Line(8, 1.5f, new Vector2i(25, 41), new Vector2i(3, 14));
+            ////corners.Line(2, new Vector2i(2, 3), new Vector2i(26, 18));
+            //corners.Polygon(6, 1.25f,
+            //    new Vector2i(12, 8),
+            //    new Vector2i(16, 12),
+            //    new Vector2i(12, 16),
+            //    new Vector2i(8, 12)
+            //    );
+            //corners.Polygon(7,
+            //    new Vector2i(12, 8),
+            //    new Vector2i(16, 12),
+            //    new Vector2i(12, 16),
+            //    new Vector2i(8, 12)
+            //);
 
             var tilesetSize = analyzer.tilesetSize;
             var templateMapping = analyzer.Mappings;
